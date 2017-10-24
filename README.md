@@ -1,7 +1,8 @@
 # COMSW4444_Project3
 New York Sock Exchange
 
-##Puzzle
+## Puzzle
+
 You have inherited a collection of 2n socks from an eccentric great-uncle. Each sock has a color determined by an (R,G,B) triple, where R, G, and B are integers between 0 and 255. Unfortunately, your great-uncle didn't care much for matching his socks, and so the collection of (R,G,B) values is random. You'll likely be embarrassed to wear two socks of different colors, so you aim to pair up socks of similar colors. At the end of the simulation you will have n pairs of socks (you choose which socks to pair) and your total embarrassment is the sum of the L2-norm differences between the (R,G,B) colors of the socks in each pair.
 
 Fortunately for you, there are many other people in a similar situation to you, and as a result a sock exchange has been developed. In the exchange, each participant publicly posts two socks they would like to trade, ranked as first and second. After all participants in the exchange see everybody's sock offers, they list two socks (also ranked) from other players that they would like to receive. The auction house then pairs up compatible trades, where two parties want each others' socks. Trades are ordered by the combined ranks, and trades with the lowest combined rank are executed first, with ties broken randomly. If an earlier trade makes a later trade impossible, then the later trade does not happen.
