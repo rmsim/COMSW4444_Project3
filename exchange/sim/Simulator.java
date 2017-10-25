@@ -33,7 +33,7 @@ public class Simulator {
     private static PlayerWrapper[] players;
 
     public static void main(String[] args) throws Exception {
-//		args = new String[] {"-p", "g0", "g0", "g0", "g0", "-g"};
+//		args = new String[] {"-p", "g3", "g3", "g3", "g3", "-g"};
         parseArgs(args);
         players = new PlayerWrapper[p];
         for (int i = 0; i < p; ++i) {
@@ -320,6 +320,7 @@ public class Simulator {
 
     public static Player loadPlayer(int id, String name) throws IOException, ClassNotFoundException, InstantiationException, InvocationTargetException, IllegalAccessException, NoSuchMethodException {
         String sep = File.separator;
+        System.out.println(sep);
         Set<File> player_files = directory(root + sep + name, ".java");
         File class_file = new File(root + sep + name + sep + "Player.class");
         long class_modified = class_file.exists() ? class_file.lastModified() : -1;

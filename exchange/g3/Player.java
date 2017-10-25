@@ -1,4 +1,4 @@
-package exchange.g0;
+package exchange.g3;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,17 +11,22 @@ public class Player extends exchange.sim.Player {
         Inherited from exchange.sim.Player:
         Random random   -       Random number generator, if you need it
 
-        Remark: you have to manually adjust te order of socks, to minimize the total embarrassment
+        Remark: you have to manually adjust the order of socks, to minimize the total embarrassment
                 the score is calculated based on your returned list of getSocks(). Simulator will pair up socks 0-1, 2-3, 4-5, etc.
      */
     private int id1, id2, id;
     private Sock[] socks;
+    private SockCollection socksCollection;
+
+
 
     @Override
     public void init(int id, int n, int p, int t, List<Sock> socks) {
         this.id = id;
         this.socks = (Sock[]) socks.toArray(new Sock[2 * n]);
+        this.socksCollection = new SockCollection(socks);
     }
+
 
     @Override
     public Offer makeOffer(List<Request> lastRequests, List<Transaction> lastTransactions) {
@@ -29,23 +34,10 @@ public class Player extends exchange.sim.Player {
 			lastRequests.get(i)		-		Player i's request last round
 			lastTransactions		-		All completed transactions last round.
 		 */
-        int test = random.nextInt(3);
-        if (test == 0) {
-            // In Offer object, null means no sock is offered
-            return new Offer(null, null);
-        } else if (test == 1) {
-            // Making random offer
-            id1 = random.nextInt(socks.length);
-            return new Offer(socks[id1], null);
-        } else if (test == 2) {
-            // Making random offer
-            id1 = random.nextInt(socks.length);
-            id2 = random.nextInt(socks.length);
-            while (id1 == id2)
-                id2 = random.nextInt(socks.length);
-            return new Offer(socks[id1], socks[id2]);
-        }
-        return null;
+
+
+        Sock[] worstPair = this.socksCollection.getWorstPair();
+        return new Offer(worstPair[0], worstPair[1]);
     }
 
     @Override
