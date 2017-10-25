@@ -5,5 +5,5 @@ clean:
 	rm exchange/*/*.class
 
 run:
-	java -cp . exchange.sim.Simulator --players g0 g0 g0 --gui --fps 1
+	java -cp . exchange.sim.Simulator --players g3_sa g3_sa g3_sa g3_sa g3_sa g3_sa --gui --fps 1
 
