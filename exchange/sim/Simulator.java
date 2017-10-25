@@ -33,7 +33,7 @@ public class Simulator {
     private static PlayerWrapper[] players;
 
     public static void main(String[] args) throws Exception {
-//		args = new String[] {"-p", "g0", "g0", "g0", "g0", "-g"};
+//		args = new String[] {"-p", "g3", "g3", "g3", "g3", "-g"};
         parseArgs(args);
         players = new PlayerWrapper[p];
         for (int i = 0; i < p; ++i) {
