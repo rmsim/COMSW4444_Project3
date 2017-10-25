@@ -183,4 +183,13 @@ public class SockCollection{
     public Sock getSock(int id) {
         return collection.get(id);
     }
+
+    public void putSock(int id, Sock s) {
+        collection.remove(id);
+        collection.add(s);
+    }
+
+    public ArrayList<Sock> getCollection() {
+        return collection;
+    }
 }

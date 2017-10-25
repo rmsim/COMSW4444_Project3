@@ -103,12 +103,12 @@ public class Player extends exchange.sim.Player {
             rank = transaction.getSecondRank();
             newSock = transaction.getFirstSock();
         }
-        if (rank == 1) socks[id1] = newSock;
-        else socks[id2] = newSock;
+        if (rank == 1) socksCollection.putSock(id1, newSock);
+        else socksCollection.putSock(id2, newSock);
     }
 
     @Override
     public List<Sock> getSocks() {
-        return Arrays.asList(socks);
+        return socksCollection.getCollection();
     }
 }
