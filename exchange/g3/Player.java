@@ -14,6 +14,8 @@ public class Player extends exchange.sim.Player {
         Remark: you have to manually adjust the order of socks, to minimize the total embarrassment
                 the score is calculated based on your returned list of getSocks(). Simulator will pair up socks 0-1, 2-3, 4-5, etc.
      */
+
+    //test comment
     private int id1, id2, id;
     private Sock[] socks;
     private SockCollection socksCollection;
