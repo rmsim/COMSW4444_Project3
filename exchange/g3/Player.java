@@ -1,4 +1,4 @@
-package exchange.g3;
+package exchange.g3_sa;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,13 +18,11 @@ public class Player extends exchange.sim.Player {
     private Sock[] socks;
     private SockCollection socksCollection;
 
-
-
     @Override
     public void init(int id, int n, int p, int t, List<Sock> socks) {
         this.id = id;
-        this.socks = (Sock[]) socks.toArray(new Sock[2 * n]);
-        this.socksCollection = new SockCollection(socks);
+        this.socks = socks.toArray(new Sock[2 * n]);
+        this.socksCollection = new SockCollection(this.socks);
     }
 
 
@@ -36,8 +34,12 @@ public class Player extends exchange.sim.Player {
 		 */
 
 
-        Sock[] worstPair = this.socksCollection.getWorstPair();
-        return new Offer(worstPair[0], worstPair[1]);
+        int[] worstPairIds = this.socksCollection.getWorstPairIds();
+        this.id1 = worstPairIds[0];
+        this.id2 = worstPairIds[1];
+        return new Offer(
+                this.socksCollection.getSock(this.id1),
+                this.socksCollection.getSock(this.id2));
     }
 
     @Override
@@ -101,12 +103,12 @@ public class Player extends exchange.sim.Player {
             rank = transaction.getSecondRank();
             newSock = transaction.getFirstSock();
         }
-        if (rank == 1) socks[id1] = newSock;
-        else socks[id2] = newSock;
+        if (rank == 1) socksCollection.putSock(id1, newSock);
+        else socksCollection.putSock(id2, newSock);
     }
 
     @Override
     public List<Sock> getSocks() {
-        return Arrays.asList(socks);
+        return socksCollection.getCollection();
     }
 }
