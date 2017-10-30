@@ -1,4 +1,4 @@
-package exchange.g3_sa;
+package exchange.g3;
 
 import java.util.ArrayList;
 import java.util.Arrays;
