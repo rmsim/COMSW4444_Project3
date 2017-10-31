@@ -23,7 +23,7 @@ public class Player extends exchange.sim.Player {
     public void init(int id, int n, int p, int t, List<Sock> socks) {
         this.id = id;
         this.socks = socks.toArray(new Sock[2 * n]);
-        this.socksCollection = new SockCollection(this.socks);
+        this.socksCollection = new SockCollection(this.socks, id);
         this.rounds = new RoundCollection();
     }
 
@@ -61,6 +61,8 @@ public class Player extends exchange.sim.Player {
 		 */
 
 		rounds.putOfferInfo(offers);
+
+        // socksCollection.getBestOffer(offers);
 
 		List<Integer> availableOffers = new ArrayList<>();
 		for (int i = 0; i < offers.size(); ++ i) {

@@ -1,16 +1,18 @@
 package exchange.g3;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
+
+import exchange.sim.Offer;
 import exchange.sim.Sock;
 
 public class SockCollection{
 
     ArrayList<Sock> collection;
     int embarrassment;
-
+    double maxDist = 442.0;
+    int id; // Player Id.
 
     public SockCollection(){
         collection = new ArrayList<Sock>(); 
@@ -22,8 +24,8 @@ public class SockCollection{
         embarrassment = 0;
     }
 
-
-    public SockCollection(Sock[] socks){
+    public SockCollection(Sock[] socks, int id){
+        this.id = id;
         this.collection = new ArrayList<Sock>(Arrays.asList(socks));
         embarrassment = 0;
     }
@@ -32,94 +34,64 @@ public class SockCollection{
         collection.add(newSock);
     }
 
-
     public void removeSock(Sock unwantedSock){
         collection.remove(unwantedSock);
     }
 
-
-    private ArrayList<ArrayList<Sock>> getSockBuckets() {
-        ArrayList<ArrayList<Sock>> rgb = new ArrayList<>();
-
-        char[] colors = new char[] {'R', 'G', 'B'};
-
-        for (int i=0; i<3; ++i) {
-            rgb.add(sortSockBucket(getSocksOfAColor(colors[i])));
-        }
-
-        return rgb;
-    }
-
-    private ArrayList<Sock> sortSockBucket(ArrayList<Sock> socks) {
-        Collections.sort(socks, new Comparator<Sock>(){
-            @Override
-            public int compare(Sock sock1, Sock sock2){
-                // Weird messing sorting algorithm because I am
-                //  unable to find a way to use the bucket color
-                //  here directly. Performing reflection for each iteration
-                //  was an over-kill.
-                if (sock1.R >= sock1.G && sock1.R >= sock1.B)
-                    return sock2.R - sock1.R;
-
-                if (sock1.G > sock1.R && sock1.G >= sock1.B)
-                    return sock2.G - sock1.G;
-
-                return sock2.B - sock1.B;
-            }
-        });
-
-        return socks;
-    }
-
-    private ArrayList<Sock> getSocksOfAColor(char color) {
-        ArrayList<Sock> socks = new ArrayList<>();
-
-        for (Sock s : collection) {
-            switch (color) {
-                case 'R':
-                    if (s.R >= s.B && s.R >= s.G) {
-                        socks.add(s);
-                    }
-
-                    break;
-
-                case 'G':
-                    if (s.G > s.R && s.G >= s.B) {
-                        socks.add(s);
-                    }
-
-                    break;
-
-                case 'B':
-                    if (s.B > s.R && s.B > s.G) {
-                        socks.add(s);
-                    }
-
-                    break;
-
-                default:
-                    System.err.println("Unknown color!");
-            }
-        }
-
-        return socks;
-    }
-
     // Change the order of socks in your collection using some algorithm.
     private void preprocessSockCollection() {
-        ArrayList<ArrayList<Sock>> rgb = getSockBuckets();
-        collection.clear();
+        ArrayList<Sock> processedSocks = new ArrayList<Sock>();
+        while (!collection.isEmpty()) {
+            Sock s = collection.get(0);
+            collection.remove(s);
 
-        for (ArrayList<Sock> bucket : rgb) {
-            collection.addAll(bucket);
+            double smallest_dist = 442.0; // > maximum distance socks can be
+            Sock bestSock = null;
+
+            for (Sock s2 : collection) {
+                double d = s.distance(s2);
+                if (d < smallest_dist) {
+                    smallest_dist = d;
+                    bestSock = s2;
+                }
+            }
+
+            processedSocks.add(s);
+            processedSocks.add(bestSock);
+            collection.remove(bestSock);
+        }
+
+        collection.addAll(processedSocks);
+        sortByDistance();
+    }
+
+    private void sortByDistance() {
+        for (int i = 0; i < collection.size()-2; i+=2) {
+            int j = i+2;
+            Sock s2 = collection.get(j+1);
+            Sock s1 = collection.get(j);
+            double currentDist = s1.distance(s2);
+
+            j-=2;
+            while (j >= 0 && currentDist > collection.get(j).distance(collection.get(j+1))) {
+                collection.set(j+3, collection.get(j+1));
+                collection.set(j+2, collection.get(j));
+                j-=2;
+            }
+
+            collection.set(j+2, s1);
+            collection.set(j+3, s2);
         }
     }
 
     private int[] getWorstPairingSockIds() {
+        // Optimize and return the top 2 socks.
+
+
         int w1 = -1;
         int w2 = -1;
 
-        double maxDist = -1.0;
+        maxDist = -1.0;
 
         for (int i = 0; i < collection.size(); i += 2) {
             Sock sock1 = collection.get(i);
@@ -135,20 +107,9 @@ public class SockCollection{
         return new int[] { w1, w2 };
     }
 
-    public void sortSocks(){
-        Collections.sort(collection, new Comparator<Sock>(){
-            @Override
-            public int compare(Sock sock1, Sock sock2){
-                //Descending Order
-                return sock2.hashCode() - sock1.hashCode();             
-            }
-        });
-    }    
-
 
     public void computeEmbarrassment(){
         preprocessSockCollection();
-        //sortSocks();
 
         if(collection.size() % 2 != 0){
             embarrassment = -1;
@@ -185,8 +146,24 @@ public class SockCollection{
     }
 
     public void putSock(int id, Sock s) {
-        collection.remove(id);
-        collection.add(s);
+        collection.set(id, s);
+    }
+
+    public List<Offer> getBestOffer(List<Offer> offers) {
+
+        Offer myOffer = offers.get(id);
+        collection.remove(myOffer.getFirst());
+        collection.remove(myOffer.getSecond());
+
+        for (int i = 0; i < offers.size(); ++i) {
+            if (i == id) {
+                continue;
+            }
+
+            // if
+        }
+
+        return null;
     }
 
     public ArrayList<Sock> getCollection() {
