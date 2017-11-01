@@ -1,34 +1,16 @@
 package exchange.g2;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Comparator;
+import java.util.*;
 
 import exchange.sim.Offer;
 import exchange.sim.Request;
 import exchange.sim.Sock;
 import exchange.sim.Transaction;
 
-class SockPair {
-    double distance;
-    Sock s1;
-    Sock s2;
-
-    public SockPair(Sock s1, Sock s2) {
-        this.s1 = s1;
-        this.s2 = s2;
-        this.distance = s1.distance(s2);
-    }
-}
-
-class SortByDistanceDesc implements Comparator<SockPair> {
-    public int compare(SockPair a, SockPair b) {
-        return (a.distance > b.distance)? -1 : 1;
-    }
-}
-
 public class Player extends exchange.sim.Player {
+
+    private final int K = 2;
+
     /*
         Inherited from exchange.sim.Player:
         Random random   -       Random number generator, if you need it
@@ -37,76 +19,181 @@ public class Player extends exchange.sim.Player {
                 the score is calculated based on your returned list of getSocks(). Simulator will pair up socks 0-1, 2-3, 4-5, etc.
      */
     private int id1, id2, id;
+    private double id1DistanceToCentroid, id2DistanceToCentroid;
 
     private Sock[] socks;
-    private SockPair[] socksPairs;
 
     private int currentTurn;
     private int totalTurns;
     private int numPlayers;
+    private int numSocks;
+
+    // Declare also the centroids so that they can be reused between iterations.
+    private AbstractEKmeans eKmeans;
+    private Sock[] centroids;
+    private SockDistanceFunction sockDistanceFunction;
+    private SockCenterFunction sockCenterFunction;
+
+    private int[][][] marketValue;
+    private PriorityQueue<SockPair> rankedPairs;
+    private List<Offer> lastOffers = null;
 
     @Override
     public void init(int id, int n, int p, int t, List<Sock> socks) {
         this.id = id;
         this.totalTurns = t;
+        this.currentTurn = t;
         this.numPlayers = p;
+        this.numSocks = n*2;
         this.socks = (Sock[]) socks.toArray(new Sock[2 * n]);
-        this.socksPairs = new SockPair[n];
 
-        pairSocksGreedily();
-    }
+        // Initialize the centroids to random points (socks).
+        this.centroids = new Sock[K];
+        for (int i = 0; i < K; i++) {
+            this.centroids[i] = new Sock(random.nextInt(256),
+                                         random.nextInt(256),
+                                         random.nextInt(256));
+        }
 
-    private void pairSocksGreedily() {
-        for (int i = 0; i < this.socks.length-1; i+=2) {
-            double minDistance = Double.POSITIVE_INFINITY;
-            int minIndex = 0;
-            for (int j = i+1; j < this.socks.length; ++j) {
-                double distance = this.socks[i].distance(this.socks[j]);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    minIndex = j;
-                }
+        // Initialize the functions for distance and centroid centering.
+        sockDistanceFunction = new SockDistanceFunction();
+        sockCenterFunction = new SockCenterFunction();
+
+        this.marketValue = new int[8][8][8]; //Splitting into 8 equal sized rgb segments
+        Comparator<SockPair> compareCentroidDistance = new Comparator<SockPair>() {
+            public int compare(SockPair sp1, SockPair sp2) {
+                return sp1.totalCentroidDistance - sp2.totalCentroidDistance > 0 ? 1 : -1;
             }
+        };
+        this.rankedPairs = new PriorityQueue<SockPair>(10, compareCentroidDistance);
 
-            // Since we found the sock closest to i-th sock, let's put it in the i+1-th position so that it is not
-            // considered again.
-            Sock tmp = this.socks[i+1];
-            this.socks[i+1] = this.socks[minIndex];
-            this.socks[minIndex] = tmp;
-
-            // Build the actual pair.
-            this.socksPairs[(int) i/2] = new SockPair(this.socks[i], this.socks[i+1]);
-        }
-        sortPairsPerDistance();
+        System.out.println("Initial embarrassment for player "+ id+ ": "+getEmbarrasment());
+        pairBlossom();
     }
 
-    private void sortPairsPerDistance() {
-        Arrays.sort(this.socksPairs, new SortByDistanceDesc());
-        for (int i = 0; i < this.socks.length-1; i+=2) {
-            this.socks[i] = this.socksPairs[(int) i/2].s1;
-            this.socks[i+1] = this.socksPairs[(int) i/2].s2;
+    private void getSocksFarthestFromCentroid() {
+        // Right now, we are only interested in the ids of the two socks with max distance from
+        // their assigned centroids.
+        computeClusters();
+
+        double distance;
+        double maxDistance = Double.NEGATIVE_INFINITY;
+        int maxDistanceId = -1;
+        double secondMaxDistance = Double.NEGATIVE_INFINITY;
+        int secondMaxDistanceId = -1;
+
+        int[] assignments = eKmeans.assignments;
+        Sock assignedCentroidSock1=null, assignedCentroidSock2=null;
+        for (int j = 0; j < this.socks.length; j+=2) {
+            assignedCentroidSock1 = centroids[assignments[j]];
+            assignedCentroidSock2 = centroids[assignments[j+1]];
+            double distance1 = assignedCentroidSock1.distance(this.socks[j]);
+            double distance2 = assignedCentroidSock2.distance(this.socks[j+1]);
+            double curDistance = distance1 + distance2;
+            rankedPairs.add(new SockPair(this.socks[j],this.socks[j+1]));
+            if (curDistance > maxDistance) {
+                maxDistance = distance1;
+                secondMaxDistance = distance2;
+                secondMaxDistanceId = j+1;
+                maxDistanceId = j;
+            }
         }
+        this.id1 = maxDistanceId;
+        this.id1DistanceToCentroid = maxDistance;
+        this.id2 = secondMaxDistanceId;
+        this.id2DistanceToCentroid = secondMaxDistance;
     }
 
+    private void computeClusters() {
+        this.eKmeans = new AbstractEKmeans<Sock, Sock>(
+                this.centroids, this.socks, false,
+                sockDistanceFunction, sockCenterFunction, null
+        );
+        eKmeans.run();
+    }
+
+
+    private double getEmbarrasment() {
+        double result = 0;
+        for (int i = 0; i < this.numSocks; i += 2){
+            result += this.socks[i].distance(this.socks[i+1]);
+        }
+        return result;
+    }
+
+    public void pairBlossom() {
+        int[] match = new Blossom(getCostMatrix(), true).maxWeightMatching();
+        List<Sock> result = new ArrayList<Sock>();
+        for (int i=0; i<match.length; i++) {
+            if (match[i] < i) continue;
+            result.add(socks[i]);
+            result.add(socks[match[i]]);
+        }
+
+        socks = (Sock[]) result.toArray(new Sock[socks.length]);
+    }
+
+    private float[][] getCostMatrix() {
+        float[][] matrix = new float[numSocks*(numSocks-1)/2][3];
+        int idx = 0;
+        for (int i = 0; i < socks.length; i++) {
+            for (int j=i+1; j< socks.length; j++) {
+                matrix[idx] = new float[]{i, j, (float)(-socks[i].distance(socks[j]))};
+                idx ++;
+            }
+        }
+        return matrix;
+    }
+    
     @Override
     public Offer makeOffer(List<Request> lastRequests, List<Transaction> lastTransactions) {
         /*
 			lastRequests.get(i)		-		Player i's request last round
 			lastTransactions		-		All completed transactions last round.
 		 */
+        for (Request request : lastRequests) {
+            if(request == null) continue;
+            if(request.getFirstID() >= 0 && request.getFirstRank() >= 0) {
+            Sock first = lastOffers.get(request.getFirstID()).getSock(request.getFirstRank());
+            marketValue[first.R/32][first.G/32][first.B/32] += Math.pow(totalTurns-currentTurn,2); 
+            }
+            if(request.getSecondID() >= 0 && request.getSecondRank() >= 0) {
+            Sock second = lastOffers.get(request.getSecondID()).getSock(request.getSecondRank());
+            marketValue[second.R/32][second.G/32][second.B/32] += Math.pow(totalTurns-currentTurn,2);
+            } 
+        }
+        
+        currentTurn--;
+        pairBlossom();
+        getSocksFarthestFromCentroid();
 
-        // Offer pair with the longest distance.
-        pairSocksGreedily();
-        return new Offer(this.socks[0], this.socks[1]);
+        SockPair maxMarketPair = rankedPairs.poll();
+        int maxMarketValue = marketValue[maxMarketPair.s1.R/32][maxMarketPair.s1.G/32][maxMarketPair.s1.B/32] +
+            marketValue[maxMarketPair.s1.R/32][maxMarketPair.s1.G/32][maxMarketPair.s1.B/32]; 
+
+        for(int i=0; i<5; i++) {
+            SockPair next = rankedPairs.poll();
+            int nextMarketValue = marketValue[next.s1.R/32][next.s1.G/32][next.s1.B/32] + marketValue[next.s2.R/32][next.s2.G/32][next.s2.B/32]; 
+            if (nextMarketValue > maxMarketValue) {
+                maxMarketPair = next;
+                maxMarketValue = nextMarketValue;
+            } 
+        }
+        id1 = getSocks().indexOf(maxMarketPair.s1);
+        id2 = getSocks().indexOf(maxMarketPair.s2);
+        rankedPairs.clear();
+        
+        return new Offer(maxMarketPair.s1,maxMarketPair.s2);
     }
 
-    private double getMinDistanceToNonOfferedSocks(Sock s) {
-        // Assumming socks 0 and 1 are the ones offered.
+    private double getMinDistanceToAnyCentroid(Sock s) {
         double minDistance = Double.POSITIVE_INFINITY;
-        for (int i = 2; i < this.socks.length; ++i) {
-            double distance = this.socks[i].distance(s);
+        int minIndex = 0;
+        for (int i = 0; i < this.centroids.length; ++i) {
+            double distance = this.centroids[i].distance(s);
             if (distance < minDistance) {
                 minDistance = distance;
+                minIndex = i;
             }
         }
         return minDistance;
@@ -123,17 +210,19 @@ public class Player extends exchange.sim.Player {
 
 			Remark: For Request object, rank ranges between 1 and 2
 		 */
-        double firstOfferedSockDistance = getMinDistanceToNonOfferedSocks(this.socks[0]);
-        double secondOfferedSockDistance = getMinDistanceToNonOfferedSocks(this.socks[1]);
+        for( Offer offer : offers) {
+            Sock first = offer.getFirst();
+            Sock second = offer.getSecond();
+            marketValue[first.R/32][first.G/32][first.B/32] -= Math.pow(totalTurns-currentTurn,2); 
+            marketValue[second.R/32][second.G/32][second.B/32] -= Math.pow(totalTurns-currentTurn,2); 
+        }
+        lastOffers = offers;
 
-		double minOfferedSocksDistance = Math.min(firstOfferedSockDistance, secondOfferedSockDistance);
-		double maxOfferedSocksDistance = Math.max(firstOfferedSockDistance, secondOfferedSockDistance);
-
-        double minDistance = minOfferedSocksDistance;
+        double minDistance = this.id1DistanceToCentroid;
         int minDistanceOfferId = -1;
         int minDistanceOfferRank = -1;
 
-        double secondMinDistance = maxOfferedSocksDistance;
+        double secondMinDistance = this.id2DistanceToCentroid;
         int secondMinDistanceOfferId = -1;
         int secondMinDistanceOfferRank = -1;
 
@@ -144,7 +233,7 @@ public class Player extends exchange.sim.Player {
                 Sock s = offers.get(i).getSock(j);
                 if (s == null) continue;
 
-                distance = getMinDistanceToNonOfferedSocks(s);
+                distance = getMinDistanceToAnyCentroid(s);
                 if (distance < minDistance) {
                     secondMinDistance = minDistance;
                     secondMinDistanceOfferId = minDistanceOfferId;
@@ -178,6 +267,8 @@ public class Player extends exchange.sim.Player {
          */
         int rank;
         Sock newSock;
+        Sock one = socks[id1];
+        Sock two = socks[id2];
         if (transaction.getFirstID() == id) {
             rank = transaction.getFirstRank();
             newSock = transaction.getSecondSock();
@@ -185,8 +276,8 @@ public class Player extends exchange.sim.Player {
             rank = transaction.getSecondRank();
             newSock = transaction.getFirstSock();
         }
-        if (rank == 1) socks[0] = newSock;
-        else socks[1] = newSock;
+        if (rank == 1) socks[id1] = newSock;
+        else socks[id2] = newSock;
     }
 
     @Override
