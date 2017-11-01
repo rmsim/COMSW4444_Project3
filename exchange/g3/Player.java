@@ -16,6 +16,8 @@ public class Player extends exchange.sim.Player {
     private Sock[] socks;
     private SockCollection socksCollection;
     private int turn = -1;
+    private int timeSinceTransaction = 0;
+    private boolean transactionOccurred = true;
 
     private RoundCollection rounds;
 
@@ -27,7 +29,6 @@ public class Player extends exchange.sim.Player {
         this.rounds = new RoundCollection();
     }
 
-
     @Override
     public Offer makeOffer(List<Request> lastRequests, List<Transaction> lastTransactions) {
         /*
@@ -37,7 +38,17 @@ public class Player extends exchange.sim.Player {
 
         // Tracks the current turn number.
         this.turn += 1;
-        
+
+        if (!transactionOccurred) {
+            ++timeSinceTransaction;
+        }
+
+        transactionOccurred = false;
+
+        if (timeSinceTransaction > 3) {
+            this.socksCollection.shuffle();
+        }
+
         rounds.putTransactionInfo(lastRequests, lastTransactions);
 
         int[] worstPairIds = this.socksCollection.getWorstPairIds();
@@ -61,35 +72,7 @@ public class Player extends exchange.sim.Player {
 		 */
 
 		rounds.putOfferInfo(offers);
-
-        // socksCollection.getBestOffer(offers);
-
-		List<Integer> availableOffers = new ArrayList<>();
-		for (int i = 0; i < offers.size(); ++ i) {
-		    if (i == id) continue;
-
-		    // Encoding the offer information into integer: id * 2 + rank - 1
-            if (offers.get(i).getFirst() != null)
-                availableOffers.add(i * 2);
-            if (offers.get(i).getSecond() != null)
-                availableOffers.add(i * 2 + 1);
-        }
-
-        int test = random.nextInt(3);
-        if (test == 0 || availableOffers.size() == 0) {
-            // In Request object, id == -1 means no request.
-            return new Request(-1, -1, -1, -1);
-        } else if (test == 1 || availableOffers.size() == 1) {
-            // Making random requests
-            int k = availableOffers.get(random.nextInt(availableOffers.size()));
-            return new Request(k / 2, k % 2 + 1, -1, -1);
-        } else {
-            int k1 = availableOffers.get(random.nextInt(availableOffers.size()));
-            int k2 = availableOffers.get(random.nextInt(availableOffers.size()));
-            while (k1 == k2)
-                k2 = availableOffers.get(random.nextInt(availableOffers.size()));
-            return new Request(k1 / 2, k1 % 2 + 1, k2 / 2, k2 % 2 + 1);
-        }
+        return socksCollection.requestBestOffer(offers);
     }
 
     @Override
@@ -113,8 +96,16 @@ public class Player extends exchange.sim.Player {
             rank = transaction.getSecondRank();
             newSock = transaction.getFirstSock();
         }
-        if (rank == 1) socksCollection.putSock(id1, newSock);
-        else socksCollection.putSock(id2, newSock);
+
+        if (rank == 1) {
+            socksCollection.putSock(id1, newSock);
+        }
+        else {
+            socksCollection.putSock(id2, newSock);
+        }
+
+        transactionOccurred = true;
+        timeSinceTransaction = 0;
     }
 
     @Override
