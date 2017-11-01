@@ -18,17 +18,9 @@ public class SockCollection{
     //  optimize against performing greedy pair.
     boolean transactionOccurred = true;
 
-    public SockCollection(){
-        collection = new ArrayList<Sock>(); 
-    }
-
-    public SockCollection(ArrayList<Sock> collection){
-        this.collection = collection;
-    }
-
     public SockCollection(Sock[] socks, int id){
         this.id = id;
-        this.collection = new ArrayList<Sock>(Arrays.asList(socks));
+        this.collection = new ArrayList<>(Arrays.asList(socks));
     }
 
     public void addSock(Sock newSock){
@@ -41,7 +33,7 @@ public class SockCollection{
 
     // Change the order of socks in your collection using some algorithm.
     private void preprocessSockCollection() {
-        ArrayList<Sock> processedSocks = new ArrayList<Sock>();
+        ArrayList<Sock> processedSocks = new ArrayList<>();
         while (!collection.isEmpty()) {
             Sock s = collection.get(0);
             collection.remove(s);
@@ -57,11 +49,10 @@ public class SockCollection{
                 }
             }
 
-            // System.out.println("Best dist: " + smallest_dist);
+            collection.remove(bestSock);
 
             processedSocks.add(s);
             processedSocks.add(bestSock);
-            collection.remove(bestSock);
         }
 
         collection.addAll(processedSocks);
@@ -91,7 +82,7 @@ public class SockCollection{
         int w1 = -1;
         int w2 = -1;
 
-        maxDist = -1.0;
+        double maxDist = -1.0;
 
         for (int i = 0; i < collection.size(); i += 2) {
             Sock sock1 = collection.get(i);
@@ -152,15 +143,14 @@ public class SockCollection{
         return result;
     }
 
-    public double getEmbarrassment(){
-        return computeEmbarrassment();
-    }
-
     public int[] getWorstPairIds(){
-        computeEmbarrassment();
+        if (transactionOccurred) {
+            preprocessSockCollection();
+        }
         
-        if (collection.size() < 2)
+        if (collection.size() < 2) {
             return new int[]{-1, -1};
+        }
 
         // Reset the transaction flag.
         transactionOccurred = false;
