@@ -107,7 +107,7 @@ public class Blossom {
 
         // If v is a vertex,
         // neighbend[v] is the list of remote endpoints of the edges attached to v.
-        // Not modified by the algorithm. 
+        // Not modified by the algorithm.
         List<Integer>[] neighbend = new ArrayList[nvertex];
         for (int i = 0; i < neighbend.length; i++) {
             neighbend[i] = new ArrayList<Integer>();
