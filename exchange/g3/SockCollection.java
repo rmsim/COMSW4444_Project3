@@ -30,6 +30,7 @@ public class SockCollection{
         this.id = id;
         this.collection = new ArrayList<>(socks);
 
+        //50 divide by 17 gave me 3, and that is the smallest case we are starting
         this.K = (int) Math.ceil(socks.size()/17);
         this.clusters = new ArrayList();
 
