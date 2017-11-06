@@ -1,5 +1,7 @@
 package exchange.sim;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
@@ -12,7 +14,18 @@ public class PlayerWrapper {
     private long timeout, originalTimeout, seed;
     private Multiset<Sock> socks = new Multiset<Sock>();
     private Random random;
-    private boolean illegal, timedOut;
+    private boolean illegal;
+
+    public void setTimedOut(boolean timedOut) {
+        this.timedOut = timedOut;
+    }
+
+    public void setRte(boolean rte) {
+        this.rte = rte;
+    }
+
+    private boolean timedOut;
+    private boolean rte;
 
     public PlayerWrapper(Player player, int id, String name, int n, long timeout, long seed) {
         this.player = player;
@@ -23,6 +36,7 @@ public class PlayerWrapper {
         originalTimeout = timeout;
         this.illegal = false;
         this.timedOut = false;
+        this.rte = false;
         this.seed = seed;
         this.random = new Random(seed);
         thread = new Timer();
@@ -31,7 +45,7 @@ public class PlayerWrapper {
 
     public void init(int n, int p, int t) {
 //        System.out.println("Generating player " + id + "'s socks");
-        for (int i = 0; i < 2 * n; ++ i) {
+        for (int i = 0; i < 2 * n; ++i) {
             Sock sock = new Sock(random.nextInt(256), random.nextInt(256), random.nextInt(256));
             socks.add(sock);
 //            System.out.println(sock + " " + socks.contains(sock));
@@ -42,10 +56,16 @@ public class PlayerWrapper {
             return null;
         });
         try {
-        thread.call_wait(timeout);
-        } catch (Exception e) {
+            thread.call_wait(timeout);
+        } catch (TimeoutException e) {
             this.timedOut = true;
             System.err.println("Player " + name + "(" + id + ")" + " timed out.");
+            return;
+        } catch (Exception e) {
+            this.rte = true;
+            StringWriter errors = new StringWriter();
+            e.printStackTrace(new PrintWriter(errors));
+            System.err.println(errors.toString());
             return;
         }
         long elapsedTime = thread.getElapsedTime();
@@ -58,9 +78,15 @@ public class PlayerWrapper {
         Offer ret;
         try {
             ret = thread.call_wait(timeout);
-        } catch (Exception e) {
+        } catch (TimeoutException e) {
             this.timedOut = true;
             System.err.println("Player " + name + "(" + id + ")" + " timed out.");
+            return new Offer(null, null);
+        } catch (Exception e) {
+            this.rte = true;
+            StringWriter errors = new StringWriter();
+            e.printStackTrace(new PrintWriter(errors));
+            System.err.println(errors.toString());
             return new Offer(null, null);
         }
         long elapsedTime = thread.getElapsedTime();
@@ -75,9 +101,15 @@ public class PlayerWrapper {
         Request ret;
         try {
             ret = thread.call_wait(timeout);
-        } catch (Exception e) {
+        } catch (TimeoutException e) {
             this.timedOut = true;
             System.err.println("Player " + name + "(" + id + ")" + " timed out.");
+            return new Request(-1, -1, -1, -1);
+        } catch (Exception e) {
+            this.rte = true;
+            StringWriter errors = new StringWriter();
+            e.printStackTrace(new PrintWriter(errors));
+            System.err.println(errors.toString());
             return new Request(-1, -1, -1, -1);
         }
         long elapsedTime = thread.getElapsedTime();
@@ -93,10 +125,16 @@ public class PlayerWrapper {
             return null;
         });
         try {
-        thread.call_wait(timeout);
-        } catch (Exception e) {
+            thread.call_wait(timeout);
+        } catch (TimeoutException e) {
             this.timedOut = true;
             System.err.println("Player " + name + "(" + id + ")" + " timed out.");
+            return;
+        } catch (Exception e) {
+            this.rte = true;
+            StringWriter errors = new StringWriter();
+            e.printStackTrace(new PrintWriter(errors));
+            System.err.println(errors.toString());
             return;
         }
         long elapsedTime = thread.getElapsedTime();
@@ -120,17 +158,22 @@ public class PlayerWrapper {
     }
 
     public boolean isActive() {
-        return !timedOut && !illegal;
+        return !timedOut && !illegal && !rte;
     }
+
     public void setIllegal(boolean illegal) {
         this.illegal = illegal;
     }
+
     public String getName() {
+        if (illegal && rte) return name + "(RTE & illegal)";
+        if (!illegal && rte) return name + "(RTE)";
         if (illegal && timedOut) return name + "(timed out & illegal)";
         if (!illegal && timedOut) return name + "(timed out)";
-        if (illegal && !timedOut) return name + "(illegal)";
+        if (illegal && !timedOut && !rte) return name + "(illegal)";
         return name;
     }
+
     public double getTotalEmbarrassment() throws Exception {
         if (!thread.isAlive()) thread.start();
         thread.call_start(() -> player.getSocks());
@@ -140,9 +183,13 @@ public class PlayerWrapper {
         } catch (TimeoutException e) {
             this.timedOut = true;
             throw new TimeoutException("Player " + name + "(" + id + ")" + " timed out.");
+        } catch (Exception e) {
+            this.rte = true;
+            throw e;
         }
         long elapsedTime = thread.getElapsedTime();
         timeout -= elapsedTime;
+        //return ret;
         // List<Sock> list = player.getSocks();
         if (list.size() != 2 * n)
             return -1;
@@ -155,6 +202,7 @@ public class PlayerWrapper {
         }
         for (Sock sock : list)
             socks.add(sock);
+
         double result = 0;
         for (int i = 0; i < list.size(); i += 2)
             result += list.get(i).distance(list.get(i + 1));

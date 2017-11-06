@@ -4,15 +4,14 @@ import javax.tools.JavaCompiler;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 import java.awt.*;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 public class Simulator {
     private static final String root = "exchange";
@@ -30,7 +29,7 @@ public class Simulator {
     private static int t = 1000;
     private static List<String> playerNames = new ArrayList<String>();
     private static PlayerWrapper[] players;
-    private static double[] totalEmbarrassments;
+    private static double[] totalEmbarrassments, initialEmbarrassments;
 
     public static void main(String[] args) throws Exception {
 //		args = new String[] {"-p", "g1", "g2", "g3", "g4", "g5", "g6", "-n", "10", "-t", "100", "-s", "1411390388"};
@@ -66,7 +65,9 @@ public class Simulator {
                 try {
                     Desktop.getDesktop().browse(new URI("http://localhost:" + server.port()));
                 } catch (URISyntaxException e) {
-                    System.err.println(e.toString());
+                    StringWriter errors = new StringWriter();
+                    e.printStackTrace(new PrintWriter(errors));
+                    System.err.println(errors.toString());
                 }
             }
         }
@@ -78,13 +79,15 @@ public class Simulator {
         Offer[] offers = new Offer[p];
         Request[] requests = new Request[p];
         totalEmbarrassments = new double[p];
+        initialEmbarrassments = new double[p];
         for (int i = 0; i < p; ++i) {
             if (players[i].isActive()) {
                 try {
-                    totalEmbarrassments[i] = players[i].getTotalEmbarrassment();
+                    initialEmbarrassments[i] = totalEmbarrassments[i] = players[i].getTotalEmbarrassment();
                 } catch (Exception e) {
-                    System.err.println(e.toString());
-//                    e.printStackTrace(System.err);
+                    StringWriter errors = new StringWriter();
+                    e.printStackTrace(new PrintWriter(errors));
+                    System.err.println(errors.toString());
                 }
             }
         }
@@ -152,18 +155,22 @@ public class Simulator {
                 players[transaction.getFirstID()].completeTransaction(transaction);
                 players[transaction.getSecondID()].completeTransaction(transaction);
 
-                if (players[transaction.getFirstID()].isActive()) {
+                if (gui && players[transaction.getFirstID()].isActive()) {
                     try {
                         totalEmbarrassments[transaction.getFirstID()] = players[transaction.getFirstID()].getTotalEmbarrassment();
                     } catch (Exception e) {
-                        System.err.println(e.toString());
+                        StringWriter errors = new StringWriter();
+                        e.printStackTrace(new PrintWriter(errors));
+                        System.err.println(errors.toString());
                     }
                 }
-                if (players[transaction.getSecondID()].isActive()) {
+                if (gui && players[transaction.getSecondID()].isActive()) {
                     try {
                         totalEmbarrassments[transaction.getSecondID()] = players[transaction.getSecondID()].getTotalEmbarrassment();
                     } catch (Exception e) {
-                        System.err.println(e.toString());
+                        StringWriter errors = new StringWriter();
+                        e.printStackTrace(new PrintWriter(errors));
+                        System.err.println(errors.toString());
                     }
                 }
                 if (!silent) System.out.println(transaction);
@@ -172,8 +179,10 @@ public class Simulator {
         }
 
         for (int i = 0; i < p; ++i) {
-            System.out.println(players[i].getName() + " gets total embarrassment " + totalEmbarrassments[i]);
+            if (players[i].isActive()) totalEmbarrassments[i] = players[i].getTotalEmbarrassment();
+            System.out.println("Total embarrassment for " + players[i].getName() + " is initially " + initialEmbarrassments[i] + " and finally " + totalEmbarrassments[i]);
         }
+        if (gui) gui(server, state(fps, t, null, null, null, totalEmbarrassments));
 
         for (int i = 0; i < p; ++i) {
             Log.record("Total running time for player " + i + " is " + players[i].getTotalElapsedTime() + "ms");
@@ -184,6 +193,7 @@ public class Simulator {
     private static boolean validateRequest(Offer[] offers, int id, Request request) {
         if (request == null)
             return false;
+        // ID range check
         if (request.getFirstID() < -1 || request.getFirstID() >= p)
             return false;
         if (request.getSecondID() < -1 || request.getSecondID() >= p)
@@ -212,10 +222,10 @@ public class Simulator {
         for (int i = 0; i < p; ++i) {
             ret += "," + players[i].getName();
             ret += "," + df.format(totalEmbarrassments[i]);
-            if (offers[i].getFirst() == null)
+            if (offers == null || offers[i].getFirst() == null)
                 ret += ",no";
             else ret += "," + offers[i].getFirst().toRGB();
-            if (offers[i].getSecond() == null)
+            if (offers == null || offers[i].getSecond() == null)
                 ret += ",no";
             else ret += "," + offers[i].getSecond().toRGB();
             if (requests == null)
@@ -284,7 +294,7 @@ public class Simulator {
                         }
                         while (i + 1 < args.length && args[i + 1].charAt(0) != '-') {
                             ++i;
-                            for (int k = 0; k < rep; ++ k)
+                            for (int k = 0; k < rep; ++k)
                                 playerNames.add(args[i]);
                         }
                     } else if (args[i].equals("-t") || args[i].equals("--turns")) {
@@ -390,7 +400,7 @@ public class Simulator {
 //        Player player = null;
 //        Constructor<?> constructor = raw_class.getConstructor(Integer.TYPE, Integer.TYPE, Integer.TYPE, Integer.TYPE);
 //        player = (Player) constructor.newInstance(id, n, p, t);
-        return (Player)raw_class.newInstance();
+        return (Player) raw_class.newInstance();
     }
 
     private static long last_modified(Iterable<File> files) {

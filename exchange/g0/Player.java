@@ -1,17 +1,20 @@
 package exchange.g0;
 
+import exchange.sim.Offer;
+import exchange.sim.Request;
+import exchange.sim.Sock;
+import exchange.sim.Transaction;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import exchange.sim.*;
 
 public class Player extends exchange.sim.Player {
     /*
         Inherited from exchange.sim.Player:
         Random random   -       Random number generator, if you need it
 
-        Remark: you have to manually adjust te order of socks, to minimize the total embarrassment
+        Remark: you have to manually adjust the order of socks, to minimize the total embarrassment
                 the score is calculated based on your returned list of getSocks(). Simulator will pair up socks 0-1, 2-3, 4-5, etc.
      */
     private int id1, id2, id;
@@ -26,7 +29,7 @@ public class Player extends exchange.sim.Player {
     @Override
     public Offer makeOffer(List<Request> lastRequests, List<Transaction> lastTransactions) {
         /*
-			lastRequests.get(i)		-		Player i's request last round
+            lastRequests.get(i)		-		Player i's request last round
 			lastTransactions		-		All completed transactions last round.
 		 */
         int test = random.nextInt(3);
@@ -50,7 +53,7 @@ public class Player extends exchange.sim.Player {
 
     @Override
     public Request requestExchange(List<Offer> offers) {
-		/*
+        /*
 			offers.get(i)			-		Player i's offer
 			For each offer:
 			offer.getSock(rank = 1, 2)		-		get rank's offer
@@ -60,11 +63,11 @@ public class Player extends exchange.sim.Player {
 			Remark: For Request object, rank ranges between 1 and 2
 		 */
 
-		List<Integer> availableOffers = new ArrayList<>();
-		for (int i = 0; i < offers.size(); ++ i) {
-		    if (i == id) continue;
+        List<Integer> availableOffers = new ArrayList<>();
+        for (int i = 0; i < offers.size(); ++i) {
+            if (i == id) continue;
 
-		    // Encoding the offer information into integer: id * 2 + rank - 1
+            // Encoding the offer information into integer: id * 2 + rank - 1
             if (offers.get(i).getFirst() != null)
                 availableOffers.add(i * 2);
             if (offers.get(i).getSecond() != null)
