@@ -30,8 +30,9 @@ public class SockCollection{
         this.id = id;
         this.collection = new ArrayList<>(socks);
 
-        this.K = 3;
-        this.clusters = new ArrayList<>();
+        this.K = (int) Math.ceil(socks.size()/17);
+        this.clusters = new ArrayList();
+
         for (int i = 0; i < K; i++) {
             clusters.add(new ArrayList<Sock>());
         }
