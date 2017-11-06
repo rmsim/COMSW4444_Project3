@@ -14,8 +14,6 @@ public class Player extends exchange.sim.Player {
     private int id1, id2, id;
     private SockCollection socksCollection;
     private int turn = -1;
-    private int timeSinceTransaction = 0;
-    private boolean transactionOccurred = false;
 
     private RoundCollection rounds;
 
@@ -35,16 +33,6 @@ public class Player extends exchange.sim.Player {
 
         // Tracks the current turn number.
         this.turn += 1;
-
-        if (!transactionOccurred) {
-            ++timeSinceTransaction;
-        }
-
-        transactionOccurred = false;
-
-        if (timeSinceTransaction > 3) {
-            // this.socksCollection.shuffle();
-        }
 
         rounds.putTransactionInfo(lastRequests, lastTransactions);
 
@@ -98,9 +86,6 @@ public class Player extends exchange.sim.Player {
         else {
             socksCollection.putSock(id2, newSock);
         }
-
-        transactionOccurred = true;
-        timeSinceTransaction = 0;
     }
 
     @Override

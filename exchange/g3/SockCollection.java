@@ -24,13 +24,11 @@ public class SockCollection{
     ArrayList<Sock> clusterCenters;
     ArrayList<Sock> extras;
 
-    // double[][] clusterCenters;
-
     public SockCollection(List<Sock> socks, int id){
         this.id = id;
         this.collection = new ArrayList<>(socks);
 
-        this.K = (int) Math.ceil(socks.size()/17);
+        this.K = (int) 3; //Math.ceil(socks.size()/17);
         this.clusters = new ArrayList();
 
         for (int i = 0; i < K; i++) {
@@ -55,9 +53,15 @@ public class SockCollection{
     // Change the order of socks in your collection using some algorithm.
         Random rand = new Random();
         ArrayList<Sock> ret = new ArrayList<>();
+
+        ret.add(new Sock(0, 127, 127));
+        ret.add(new Sock(127, 0, 127));
+        ret.add(new Sock(127, 127, 0));
+
+        /*
         for (int k = 0; k < K; k++) {
             ret.add(new Sock(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
-        }
+        }*/
 
         return ret;
     }
@@ -144,20 +148,9 @@ public class SockCollection{
 
         cluster(30);
 
-        // System.out.println("PRINTING CLUSTERS:");
-        // for (ArrayList<Sock> c : clusters) {
-        //     for (Sock s : c) {
-        //         System.out.println(s);
-        //     }
-        //     System.out.println();
-        // }
-
-
         for (ArrayList<Sock> c : clusters) {
             greedilyProcessSockList(c);
         }
-
-        //ArrayList<Sock> extras = new ArrayList<Sock>();
 
         extras.clear();
         collection.clear();
@@ -174,30 +167,7 @@ public class SockCollection{
         }
 
         collection.addAll(extras);
-
-        // greedilyProcessSockList(collection);
-
     }
-
-    /*
-    private void sortByDistance() {
-        for (int i = 0; i < collection.size()-2; i+=2) {
-            int j = i+2;
-            Sock s2 = collection.get(j+1);
-            Sock s1 = collection.get(j);
-            double currentDist = s1.distance(s2);
-
-            j-=2;
-            while (j >= 0 && currentDist > collection.get(j).distance(collection.get(j+1))) {
-                collection.set(j+3, collection.get(j+1));
-                collection.set(j+2, collection.get(j));
-                j-=2;
-            }
-
-            collection.set(j+2, s1);
-            collection.set(j+3, s2);
-        }
-    }*/
 
     private int[] getWorstPairingSockIds() {
         if (extras.size() != 0) {
@@ -290,25 +260,6 @@ public class SockCollection{
 
     public void putSock(int id, Sock s) {
         collection.set(id, s);
-        transactionOccurred = true;
-    }
-
-    // Shuffle socks around to get another sock to trade next time.
-    public void shuffle() {
-        int n = collection.size();
-
-        int i = 2 * collection.size() / 3;
-        int j = i%2 == 0? i + 1: i - 1;
-
-        Sock temp1 = collection.get(n-1);
-        Sock temp2 = collection.get(n-2);
-
-        collection.set(n-1, collection.get(i));
-        collection.set(n-2, collection.get(j));
-
-        collection.set(i, temp1);
-        collection.set(j, temp2);
-
         transactionOccurred = true;
     }
 
