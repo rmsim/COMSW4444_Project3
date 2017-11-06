@@ -12,19 +12,17 @@ public class Player extends exchange.sim.Player {
                 the score is calculated based on your returned list of getSocks(). Simulator will pair up socks 0-1, 2-3, 4-5, etc.
      */
     private int id1, id2, id;
-    private Sock[] socks;
     private SockCollection socksCollection;
     private int turn = -1;
     private int timeSinceTransaction = 0;
-    private boolean transactionOccurred = true;
+    private boolean transactionOccurred = false;
 
     private RoundCollection rounds;
 
     @Override
     public void init(int id, int n, int p, int t, List<Sock> socks) {
         this.id = id;
-        this.socks = socks.toArray(new Sock[2 * n]);
-        this.socksCollection = new SockCollection(this.socks, id);
+        this.socksCollection = new SockCollection(socks, id);
         this.rounds = new RoundCollection();
     }
 
@@ -45,7 +43,7 @@ public class Player extends exchange.sim.Player {
         transactionOccurred = false;
 
         if (timeSinceTransaction > 3) {
-            this.socksCollection.shuffle();
+            // this.socksCollection.shuffle();
         }
 
         rounds.putTransactionInfo(lastRequests, lastTransactions);

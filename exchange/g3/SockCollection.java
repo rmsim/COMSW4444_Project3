@@ -17,23 +17,29 @@ public class SockCollection{
 
     // Keeps track of whether a transaction has occurred to
     //  optimize against performing greedy pair.
-    boolean transactionOccurred = true;
+    boolean transactionOccurred = false;
 
     int K; // for clustering
     ArrayList<ArrayList<Sock>> clusters;
-    double[][] clusterCenters;
+    ArrayList<Sock> clusterCenters;
+    ArrayList<Sock> extras;
 
-    public SockCollection(Sock[] socks, int id){
+    // double[][] clusterCenters;
+
+    public SockCollection(List<Sock> socks, int id){
         this.id = id;
-        this.collection = new ArrayList<>(Arrays.asList(socks));
+        this.collection = new ArrayList<>(socks);
 
-        this.K = 8;
-        this.clusters = new ArrayList();
+        this.K = 3;
+        this.clusters = new ArrayList<>();
         for (int i = 0; i < K; i++) {
             clusters.add(new ArrayList<Sock>());
         }
 
-        this.clusterCenters = new double[K][3];
+        this.clusterCenters = new ArrayList<>();
+        this.extras = new ArrayList<>();
+
+        preprocessSockCollection();
     }
 
     public void addSock(Sock newSock){
@@ -44,32 +50,23 @@ public class SockCollection{
         collection.remove(unwantedSock);
     }
 
-    public static double findDist(Sock s, double[] p) {
-        double x1 = (double)s.R;
-        double y1 = (double)s.G;
-        double z1 = (double)s.B;
-        double x2 = p[0];
-        double y2 = p[1];
-        double z2 = p[2];
-        return Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) + (z1-z2)*(z1-z2));
-    }
-
-    public double[][] findInitialClusterCenters() {
-        // Change the order of socks in your collection using some algorithm.
+    public ArrayList<Sock> findInitialClusterCenters() {
+    // Change the order of socks in your collection using some algorithm.
         Random rand = new Random();
-        double[][] ret = new double[K][3];
+        ArrayList<Sock> ret = new ArrayList<>();
         for (int k = 0; k < K; k++) {
-
-            ret[k][0] = 255*rand.nextDouble();
-            ret[k][1] = 255*rand.nextDouble();
-            ret[k][2] = 255*rand.nextDouble();
+            ret.add(new Sock(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
         }
+
         return ret;
     }
 
     private void cluster(int numIterations) {
         // adjusts clusters and clusterCenters based on collection
-        clusterCenters = findInitialClusterCenters();
+
+        if (clusterCenters.size() == 0)
+            clusterCenters = findInitialClusterCenters();
+
         int bestClusterNumber;
         double closestDistance;
         double d;
@@ -82,22 +79,24 @@ public class SockCollection{
                 bestClusterNumber = -1;
                 closestDistance = maxDist;
                 for (int k = 0; k < K; k++) {
-                    d = findDist(s, clusterCenters[k]);
+                    d = clusterCenters.get(k).distance(s);
                     if (d < closestDistance) {
                         closestDistance = d;
                         bestClusterNumber = k;
                     }
                 }
+
                 clusters.get(bestClusterNumber).add(s);
             }
+
             // use clusters to adjust centers
             for (int k = 0; k < K; k++) {
-                clusterCenters[k] = meanLoc(clusters.get(k));
+                clusterCenters.set(k, meanLoc(clusters.get(k)));
             }
         }
     }
 
-    public static double[] meanLoc(ArrayList<Sock> cluster) {
+    public static Sock meanLoc(ArrayList<Sock> cluster) {
         // returns the average location of a cluster (the "true" center)
         int clusterSize = cluster.size();
         double x = 0.0;
@@ -111,14 +110,14 @@ public class SockCollection{
         x /= clusterSize;
         y /= clusterSize;
         z /= clusterSize;
-        return new double[]{x, y, z};
+        return new Sock((int)x, (int)y, (int)z);
     }
 
     public void greedilyProcessSockList(ArrayList<Sock> socks) {
         ArrayList<Sock> processedSocks = new ArrayList<Sock>();
         while (socks.size() >= 2) {
             Sock s = socks.get(0);
-            socks.remove(s);
+            socks.remove(0);
 
             double smallest_dist = maxDist;
             Sock bestSock = null;
@@ -131,7 +130,6 @@ public class SockCollection{
                 }
             }
 
-
             processedSocks.add(s);
             processedSocks.add(bestSock);
             socks.remove(bestSock);
@@ -142,6 +140,7 @@ public class SockCollection{
 
     // Change the order of socks in your collection using some algorithm.
     private void preprocessSockCollection() {
+
         cluster(30);
 
         // System.out.println("PRINTING CLUSTERS:");
@@ -157,8 +156,9 @@ public class SockCollection{
             greedilyProcessSockList(c);
         }
 
-        ArrayList<Sock> extras = new ArrayList<Sock>();
+        //ArrayList<Sock> extras = new ArrayList<Sock>();
 
+        extras.clear();
         collection.clear();
         for (ArrayList<Sock> c : clusters) {
             if (c.size() % 2 == 0) {
@@ -167,18 +167,18 @@ public class SockCollection{
                 for (int i = 1; i < c.size(); i++) {
                     collection.add(c.get(i));
                 }
+
                 extras.add(c.get(0));
             }
         }
+
         collection.addAll(extras);
-
-
-
 
         // greedilyProcessSockList(collection);
 
     }
 
+    /*
     private void sortByDistance() {
         for (int i = 0; i < collection.size()-2; i+=2) {
             int j = i+2;
@@ -196,28 +196,31 @@ public class SockCollection{
             collection.set(j+2, s1);
             collection.set(j+3, s2);
         }
-    }
+    }*/
 
     private int[] getWorstPairingSockIds() {
-        // int w1 = -1;
-        // int w2 = -1;
+        if (extras.size() != 0) {
+            // We know that the extras are at the end of the collection.
+            return new int[] {collection.size()-1, collection.size()-2};
+        }
 
-        // double maxDistance = -1.0;
+        int w1 = -1;
+        int w2 = -1;
 
-        // for (int i = 0; i < collection.size(); i += 2) {
-        //     Sock sock1 = collection.get(i);
-        //     Sock sock2 = collection.get(i + 1);
+        double maxDistance = -1.0;
 
-        //     if (sock1.distance(sock2) > maxDistance) {
-        //         w1 = i;
-        //         w2 = i+1;
-        //         maxDistance = sock1.distance(sock2);
-        //     }
-        // }
+        for (int i = 0; i < collection.size(); i += 2) {
+            Sock sock1 = collection.get(i);
+            Sock sock2 = collection.get(i + 1);
 
-        // return new int[] { w1, w2 };
+            if (sock1.distance(sock2) > maxDistance) {
+                w1 = i;
+                w2 = i+1;
+                maxDistance = sock1.distance(sock2);
+            }
+        }
 
-        return new int[] {collection.size()-1, collection.size()-2};
+        return new int[] { w1, w2 };
     }
 
     // Gets the shortest distance of a sock to the rest of our collection.
