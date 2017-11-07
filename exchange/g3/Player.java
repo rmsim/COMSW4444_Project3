@@ -13,13 +13,14 @@ public class Player extends exchange.sim.Player {
      */
     private int id1, id2, id;
     private SockCollection socksCollection;
-    private int turn = -1;
+    private int turn;
 
     private RoundCollection rounds;
 
     @Override
     public void init(int id, int n, int p, int t, List<Sock> socks) {
         this.id = id;
+        this.turn = t;
         this.socksCollection = new SockCollection(socks, id);
         this.rounds = new RoundCollection();
     }
@@ -32,7 +33,7 @@ public class Player extends exchange.sim.Player {
 		 */
 
         // Tracks the current turn number.
-        this.turn += 1;
+        this.turn -= 1;
 
         rounds.putTransactionInfo(lastRequests, lastTransactions);
 
@@ -86,16 +87,21 @@ public class Player extends exchange.sim.Player {
         //remove the sock we are getting rid of aka id1
         //find its pair and move it to good and shift pivot
         if (rank == 1) {
-            socksCollection.putSock(id1, newSock);
+            socksCollection.putPairedSock(id1, newSock);
         }
         else {
-            socksCollection.putSock(id2, newSock);
+            socksCollection.putPairedSock(id2, newSock);
         }
     }
 
     @Override
     public List<Sock> getSocks() {
-        return socksCollection.getCollection();
+        boolean rePair = false;
+        if (turn <= 1) {
+            rePair = true;
+        }
+
+        return socksCollection.getCollection(rePair);
     }
 }
 

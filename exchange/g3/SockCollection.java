@@ -3,12 +3,10 @@ package exchange.g3;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
-import java.util.Random;
 
 import exchange.sim.Offer;
 import exchange.sim.Request;
 import exchange.sim.Sock;
-
 
 public class SockCollection{
 
@@ -20,34 +18,15 @@ public class SockCollection{
     //  optimize against performing greedy pair.
     boolean transactionOccurred = false;
 
-    int K; // for clustering
-    ArrayList<ArrayList<Sock>> clusters;
-    ArrayList<Sock> clusterCenters;
-    ArrayList<Sock> extras;
-
     int p; //pivot number
-    double t = 50; //threshold distance
-    int round; //keep track of turns
+    double t = 45; //threshold distance
 
-    public SockCollection(List<Sock> socks, int id, int turn){
+    public SockCollection(List<Sock> socks, int id){
         this.id = id;
         this.collection = new ArrayList<>(socks);
 
-        this.K = (int) 3; //Math.ceil(socks.size()/17);
-        this.clusters = new ArrayList();
-
-        for (int i = 0; i < K; i++) {
-            clusters.add(new ArrayList<Sock>());
-        }
-
-        this.clusterCenters = new ArrayList<>();
-        this.extras = new ArrayList<>();
-
         //design a pivot
         this.p = 0;
-
-        //setting global turn to round
-        this.round = turn;
 
         preprocessSockCollection();
     }
@@ -56,102 +35,8 @@ public class SockCollection{
         collection.add(newSock);
     }
 
-    public void removeSock(Sock unwantedSock){
-        collection.remove(unwantedSock);
-    }
-
-    public ArrayList<Sock> findInitialClusterCenters() {
-    // Change the order of socks in your collection using some algorithm.
-        Random rand = new Random();
-        ArrayList<Sock> ret = new ArrayList<>();
-
-        ret.add(new Sock(0, 127, 127));
-        ret.add(new Sock(127, 0, 127));
-        ret.add(new Sock(127, 127, 0));
-
-        /*
-        for (int k = 0; k < K; k++) {
-            ret.add(new Sock(rand.nextInt(256), rand.nextInt(256), rand.nextInt(256)));
-        }*/
-
-        return ret;
-    }
-
-    private void cluster(int numIterations) {
-        // adjusts clusters and clusterCenters based on collection
-
-        if (clusterCenters.size() == 0)
-            clusterCenters = findInitialClusterCenters();
-
-        int bestClusterNumber;
-        double closestDistance;
-        double d;
-        for (int iteration = 0; iteration < numIterations; iteration++) {
-            // use centers to place socks into clusters
-            for (ArrayList<Sock> c : clusters) {
-                c.clear();
-            }
-            for (Sock s : collection) {
-                bestClusterNumber = -1;
-                closestDistance = maxDist;
-                for (int k = 0; k < K; k++) {
-                    d = clusterCenters.get(k).distance(s);
-                    if (d < closestDistance) {
-                        closestDistance = d;
-                        bestClusterNumber = k;
-                    }
-                }
-
-                clusters.get(bestClusterNumber).add(s);
-            }
-
-            // use clusters to adjust centers
-            for (int k = 0; k < K; k++) {
-                clusterCenters.set(k, meanLoc(clusters.get(k)));
-            }
-        }
-    }
-
-    public static Sock meanLoc(ArrayList<Sock> cluster) {
-        // returns the average location of a cluster (the "true" center)
-        int clusterSize = cluster.size();
-        double x = 0.0;
-        double y = 0.0;
-        double z = 0.0;
-        for (Sock s : cluster) {
-            x += (double) s.R;
-            y += (double) s.G;
-            z += (double) s.B;
-        }
-        x /= clusterSize;
-        y /= clusterSize;
-        z /= clusterSize;
-        return new Sock((int)x, (int)y, (int)z);
-    }
-
-    public void greedilyProcessSockList(ArrayList<Sock> socks) {
-        ArrayList<Sock> processedSocks = new ArrayList<Sock>();
-        while (socks.size() >= 2) {
-            Sock s = socks.get(0);
-            socks.remove(0);
-
-            double smallest_dist = maxDist;
-            Sock bestSock = null;
-
-            for (Sock s2 : socks) {
-                double d = s.distance(s2);
-                if (d < smallest_dist) {
-                    smallest_dist = d;
-                    bestSock = s2;
-                }
-            }
-
-            processedSocks.add(s);
-            processedSocks.add(bestSock);
-            socks.remove(bestSock);
-        }
-
-        socks.addAll(processedSocks);
+    public void removeSock(int sockId){
+        collection.remove(sockId);
     }
 
     //from team 2
@@ -184,51 +69,33 @@ public class SockCollection{
     private void preprocessSockCollection() {
         //runs Blossom at the start
         //CORRECT SYNTAX
-
-        Good[];
-        Bad[];
         pairBlossom();
-        for (p < collection.size()) {
-            if (collection.get(i) < t) {
-                Good.append(i);
+
+        //System.out.println(collection);
+
+        this.p = 0;
+
+        for (int i = 0; i < collection.size(); i+=2) {
+            if (collection.get(p).distance(collection.get(p+1)) > t) {
+                Sock s1 = collection.get(p);
+                Sock s2 = collection.get(p+1);
+                collection.remove(p);
+                collection.remove(p);
+                collection.add(s1);
+                collection.add(s2);
             } else {
-                Bad.append(i);
-            }
-            return Good + Bad;
-            p = Bad[0];
-        }
-        //arranging the pairs
-        cluster(30);
-
-        for (ArrayList<Sock> c : clusters) {
-            greedilyProcessSockList(c);
-        }
-
-        extras.clear();
-        collection.clear();
-        for (ArrayList<Sock> c : clusters) {
-            if (c.size() % 2 == 0) {
-                collection.addAll(c);
-            } else {
-                for (int i = 1; i < c.size(); i++) {
-                    collection.add(c.get(i));
-                }
-
-                extras.add(c.get(0));
+                p += 2;
             }
         }
 
-        collection.addAll(extras);
+        //System.out.println(collection);
+
+        System.out.println("Pivot: " + p);
     }
 
+    // TODO: Move the worst pairing to the end.
     private int[] getWorstPairingSockIds() {
-        //now consider from p onwards not the whole collection
-
-        if (extras.size() != 0) {
-            // We know that the extras are at the end of the collection.
-            return new int[] {collection.size()-1, collection.size()-2};
-        }
-
+        //now consider from p onwards. not the whole collection
         int w1 = -1;
         int w2 = -1;
 
@@ -248,27 +115,13 @@ public class SockCollection{
         return new int[] { w1, w2 };
     }
 
-    // Gets the shortest distance of a sock to the rest of our collection.
-    private double getShortestDistance(Sock sock) {
-        double minDistance = maxDist;
-        for (int i = 0; i < collection.size(); ++i) {
-            if (sock.distance(collection.get(i)) < minDistance) {
-                minDistance = sock.distance(collection.get(i));
-            }
-        }
-
-        return minDistance;
-    }
-
     // Check if a new sock will give us a better pairing than an existing pair.
     private boolean checkNewSockCompatibility(Sock sock) {
         //check if new sock with existing sock in last 50percent to give threshold value
         //if better than threshold value, improve our score and take it
         //if worse, ignore it
 
-        for (int i = 0; i < collection.size(); i += 2) {
-            // int j = i % 2 == 0? i + 1: i - 1;
-            int j = i + 1;
+        for (int i = p; i < collection.size(); i += 2) {
             if (sock.distance(collection.get(i)) < t){
                 return true;
             }
@@ -298,25 +151,18 @@ public class SockCollection{
 
     public int[] getWorstPairIds(){
 
-        // only run preprocess in beginning init constructor & before last turn
-        if (round ==1) {
+        System.out.println("Pivot: " + p);
+
+        // Preprocess if our pivot doesn't separate the list well.
+        if (p >= collection.size() - 4) {
+            this.t -= 5;
             preprocessSockCollection();
         }
-
-//        if (transactionOccurred) {
-//            //preprocessSockCollection();
-//        }
-//
-//        if (collection.size() < 2) {
-//            return new int[]{-1, -1};
-//        }
 
         // Reset the transaction flag.
         transactionOccurred = false;
 
-        --round; //keep track of rounds
         return getWorstPairingSockIds();
-
     }
 
     public Sock getSock(int id) {
@@ -360,7 +206,7 @@ public class SockCollection{
                     continue;
                 }
 
-                //only need to compare it with p to the end
+                // Only need to compare it with p to the end
                 if (checkNewSockCompatibility(offers.get(i).getSock(j))){
                     if (toPickOffer.get(0) == -1) {
                         toPickOffer.set(0, i);
@@ -380,19 +226,33 @@ public class SockCollection{
         return new Request(toPickOffer.get(0), toPickRank.get(0), toPickOffer.get(1), toPickRank.get(1));
     }
 
-    public ArrayList<Sock> getCollection() {
+    public ArrayList<Sock> getCollection(boolean rePair) {
+        if (rePair) {
+            preprocessSockCollection();
+        }
+
         return collection;
     }
 
-    public void removeSock(int sockid, Sock s) {
-        Collection.remove(sockid);
-    }
+    public void putPairedSock(int oldId, Sock s) {
+        removeSock(oldId);
 
-    public void putPairedSock(Sock s) {
-        for (sock:Bad) {
+        double maxD = maxDist;
+        int s2 = 0;
+        for (int i = p; i < collection.size(); ++i) {
             //get the match for the Sock s
             //add into good array
-            p += 2;
+            if (collection.get(i).distance(s) < maxD) {
+                s2 = i;
+                maxD = collection.get(i).distance(s);
+            }
         }
+
+        collection.add(p, collection.get(s2));
+        collection.add(p, s);
+
+        collection.remove(collection.get(s2+2));
+
+        p += 2;
     }
 }
