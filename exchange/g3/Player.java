@@ -70,6 +70,10 @@ public class Player extends exchange.sim.Player {
             transaction.getSecondSock()     -       Similar as above
             Remark: rank ranges between 1 and 2
          */
+
+        //figure out which sock we are replacing and
+        //moving it into our kept set
+
         int rank;
         Sock newSock;
         if (transaction.getFirstID() == id) {
@@ -79,7 +83,8 @@ public class Player extends exchange.sim.Player {
             rank = transaction.getSecondRank();
             newSock = transaction.getFirstSock();
         }
-
+        //remove the sock we are getting rid of aka id1
+        //find its pair and move it to good and shift pivot
         if (rank == 1) {
             socksCollection.putSock(id1, newSock);
         }
