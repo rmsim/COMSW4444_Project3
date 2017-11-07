@@ -3,6 +3,7 @@ package exchange.g3;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
+import java.util.Random;
 
 import exchange.sim.Offer;
 import exchange.sim.Request;
@@ -14,12 +15,10 @@ public class SockCollection{
     double maxDist = 442.0;
     int id; // Player Id.
 
-    // Keeps track of whether a transaction has occurred to
-    //  optimize against performing greedy pair.
-    boolean transactionOccurred = false;
-
     int p; //pivot number
-    double t = 45; //threshold distance
+    double t = 60; //threshold distance
+
+    Random rand;
 
     public SockCollection(List<Sock> socks, int id){
         this.id = id;
@@ -27,6 +26,8 @@ public class SockCollection{
 
         //design a pivot
         this.p = 0;
+
+        rand = new Random();
 
         preprocessSockCollection();
     }
@@ -39,7 +40,7 @@ public class SockCollection{
         collection.remove(sockId);
     }
 
-    //from team 2
+    // Obtained Blossom code from team 1.
     public void pairBlossom() {
         int[] match = new Blossom(getCostMatrix(), true).maxWeightMatching();
         ArrayList<Sock> result = new ArrayList<Sock>();
@@ -67,11 +68,8 @@ public class SockCollection{
 
     // Change the order of socks in your collection using some algorithm.
     private void preprocessSockCollection() {
-        //runs Blossom at the start
-        //CORRECT SYNTAX
+        // Run Blossom.
         pairBlossom();
-
-        //System.out.println(collection);
 
         this.p = 0;
 
@@ -88,14 +86,12 @@ public class SockCollection{
             }
         }
 
-        //System.out.println(collection);
-
         System.out.println("Pivot: " + p);
     }
 
     // TODO: Move the worst pairing to the end.
     private int[] getWorstPairingSockIds() {
-        //now consider from p onwards. not the whole collection
+        // Get the worst set of socks from "p" position onwards.
         int w1 = -1;
         int w2 = -1;
 
@@ -117,9 +113,9 @@ public class SockCollection{
 
     // Check if a new sock will give us a better pairing than an existing pair.
     private boolean checkNewSockCompatibility(Sock sock) {
-        //check if new sock with existing sock in last 50percent to give threshold value
-        //if better than threshold value, improve our score and take it
-        //if worse, ignore it
+        // Check if new sock pairs well with our unmatched sock list.
+        // If better than threshold value, take it since it improves our score.
+        // Ff worse, ignore it.
 
         for (int i = p; i < collection.size(); i += 2) {
             if (sock.distance(collection.get(i)) < t){
@@ -130,10 +126,8 @@ public class SockCollection{
         return false;
     }
 
+    /*
     public double computeEmbarrassment(){
-        if (transactionOccurred)
-            preprocessSockCollection();
-
         if(collection.size() % 2 != 0){
             return -1.0;
         }
@@ -147,7 +141,7 @@ public class SockCollection{
         }
 
         return result;
-    }
+    }*/
 
     public int[] getWorstPairIds(){
 
@@ -159,9 +153,6 @@ public class SockCollection{
             preprocessSockCollection();
         }
 
-        // Reset the transaction flag.
-        transactionOccurred = false;
-
         return getWorstPairingSockIds();
     }
 
@@ -169,9 +160,26 @@ public class SockCollection{
         return collection.get(id);
     }
 
-    public void putSock(int id, Sock s) {
-        collection.set(id, s);
-        transactionOccurred = true;
+    public void putSock(int oldId, Sock s) {
+        removeSock(oldId);
+
+        double maxD = maxDist;
+        int s2 = 0;
+        for (int i = p; i < collection.size(); ++i) {
+            // get the match for the Sock s
+            // add into good array
+            if (collection.get(i).distance(s) < maxD) {
+                s2 = i;
+                maxD = collection.get(i).distance(s);
+            }
+        }
+
+        collection.add(p, collection.get(s2));
+        collection.add(p, s);
+
+        collection.remove(collection.get(s2+2));
+
+        p += 2;
     }
 
     public Request requestBestOffer(List<Offer> offers) {
@@ -227,6 +235,7 @@ public class SockCollection{
     }
 
     public ArrayList<Sock> getCollection(boolean rePair) {
+        // Re-run our pairing algorithm if requested for.
         if (rePair) {
             preprocessSockCollection();
         }
@@ -234,25 +243,12 @@ public class SockCollection{
         return collection;
     }
 
-    public void putPairedSock(int oldId, Sock s) {
-        removeSock(oldId);
-
-        double maxD = maxDist;
-        int s2 = 0;
-        for (int i = p; i < collection.size(); ++i) {
-            //get the match for the Sock s
-            //add into good array
-            if (collection.get(i).distance(s) < maxD) {
-                s2 = i;
-                maxD = collection.get(i).distance(s);
-            }
-        }
-
-        collection.add(p, collection.get(s2));
-        collection.add(p, s);
-
-        collection.remove(collection.get(s2+2));
-
-        p += 2;
+    // Causing a disruption in our data.
+    // TODO: Do something better!!!
+    public void shuffle() {
+        int pos = rand.nextInt(collection.size() - p - 1) + p + 1;
+        Sock s1 = collection.get(p);
+        collection.remove(p);
+        collection.add(pos, s1);
     }
 }

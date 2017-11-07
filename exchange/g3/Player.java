@@ -14,6 +14,8 @@ public class Player extends exchange.sim.Player {
     private int id1, id2, id;
     private SockCollection socksCollection;
     private int turn;
+    private int timeSinceTransaction = 0;
+    private boolean transactionOccurred = false;
 
     private RoundCollection rounds;
 
@@ -32,8 +34,19 @@ public class Player extends exchange.sim.Player {
 			lastTransactions		-		All completed transactions last round.
 		 */
 
-        // Tracks the current turn number.
+        // Tracks number of turns left.
         this.turn -= 1;
+
+        if (!transactionOccurred) {
+            ++timeSinceTransaction;
+        }
+
+        transactionOccurred = false;
+
+        if (timeSinceTransaction > 3) {
+            this.socksCollection.shuffle();
+            timeSinceTransaction = 0;
+        }
 
         rounds.putTransactionInfo(lastRequests, lastTransactions);
 
@@ -87,11 +100,14 @@ public class Player extends exchange.sim.Player {
         //remove the sock we are getting rid of aka id1
         //find its pair and move it to good and shift pivot
         if (rank == 1) {
-            socksCollection.putPairedSock(id1, newSock);
+            socksCollection.putSock(id1, newSock);
         }
         else {
-            socksCollection.putPairedSock(id2, newSock);
+            socksCollection.putSock(id2, newSock);
         }
+
+        transactionOccurred = true;
+        timeSinceTransaction = 0;
     }
 
     @Override
