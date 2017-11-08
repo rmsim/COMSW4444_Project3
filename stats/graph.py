@@ -23,6 +23,8 @@ if __name__ == "__main__":
         result = sorted(dataI[i])
         l60 = result[int(60*len(result)/100)]
         print(i, l60)
-        plt.axvline(l60, color='b')
-        plt.xlabel(str(i) + ", " + str(l60))
+        plt.title("Socks: " + str(i) + ", 60:40 point:" + str(l60))
+        plt.axvline(l60, color='r')
+        plt.xlabel("Sock distance")
+        plt.ylabel("Frequency")
         plt.show()
