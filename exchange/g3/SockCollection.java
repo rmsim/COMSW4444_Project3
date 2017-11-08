@@ -219,21 +219,21 @@ public class SockCollection{
             // Add into good array
             if (collection.get(i).distance(s) < maxD) {
                 s2 = i;
-                oddId = i % 2 == 0 ? i + 1: i - 1;
+                //oddId = i % 2 == 0 ? i + 1: i - 1;
                 maxD = collection.get(i).distance(s);
             }
         }
 
         Sock sock2 = collection.get(s2);
-        Sock odd = collection.get(oddId);
+        //Sock odd = collection.get(oddId);
 
         collection.remove(sock2);
-        collection.remove(odd);
+        //collection.remove(odd);
 
         collection.add(p, sock2);
         collection.add(p, s);
 
-        collection.add(collection.size() - 1, odd);
+        //collection.add(collection.size() - 1, odd);
 
         p += 2;
     }
