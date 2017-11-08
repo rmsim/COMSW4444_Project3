@@ -11,7 +11,8 @@ public class Player extends exchange.sim.Player {
         Remark: you have to manually adjust the order of socks, to minimize the total embarrassment
                 the score is calculated based on your returned list of getSocks(). Simulator will pair up socks 0-1, 2-3, 4-5, etc.
      */
-    private int id1, id2, id;
+    private int id;
+    private Sock s1, s2;
     private SockCollection socksCollection;
     private int turn;
     private int timeSinceTransaction = 0;
@@ -43,19 +44,17 @@ public class Player extends exchange.sim.Player {
 
         transactionOccurred = false;
 
-        if (timeSinceTransaction > 3) {
+        if (timeSinceTransaction > 2) {
             this.socksCollection.shuffle();
             timeSinceTransaction = 0;
         }
 
         rounds.putTransactionInfo(lastRequests, lastTransactions);
 
-        int[] worstPairIds = this.socksCollection.getWorstPairIds();
-        this.id1 = worstPairIds[0];
-        this.id2 = worstPairIds[1];
-        return new Offer(
-                this.socksCollection.getSock(this.id1),
-                this.socksCollection.getSock(this.id2));
+        Sock[] worstPairSocks = this.socksCollection.getWorstPairSocks();
+        this.s1 = worstPairSocks[0];
+        this.s2 = worstPairSocks[1];
+        return new Offer(s1, s2);
     }
 
     @Override
@@ -97,13 +96,13 @@ public class Player extends exchange.sim.Player {
             rank = transaction.getSecondRank();
             newSock = transaction.getFirstSock();
         }
-        //remove the sock we are getting rid of aka id1
+        //remove the sock we are getting rid of aka s1
         //find its pair and move it to good and shift pivot
         if (rank == 1) {
-            socksCollection.putSock(id1, newSock);
+            socksCollection.putSock(s1, newSock);
         }
         else {
-            socksCollection.putSock(id2, newSock);
+            socksCollection.putSock(s2, newSock);
         }
 
         transactionOccurred = true;

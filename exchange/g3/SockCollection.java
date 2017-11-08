@@ -9,6 +9,10 @@ import exchange.sim.Offer;
 import exchange.sim.Request;
 import exchange.sim.Sock;
 
+// Bugs!
+// 1. While completing transactions, we should exclude socks that we are giving away.
+//     This is a problem when the new sock pairs better with a sock that we're getting rid of.
+
 public class SockCollection{
 
     ArrayList<Sock> collection;
@@ -16,7 +20,10 @@ public class SockCollection{
     int id; // Player Id.
 
     int p; //pivot number
-    double t = 60; //threshold distance
+    double t = 50; //threshold distance
+
+    // Indicates the number of socks remaining to be exchanged.
+    ArrayList<Sock> exchanges;
 
     Random rand;
 
@@ -24,24 +31,48 @@ public class SockCollection{
         this.id = id;
         this.collection = new ArrayList<>(socks);
 
-        //design a pivot
-        this.p = 0;
-
         rand = new Random();
+        exchanges = new ArrayList<>();
 
-        preprocessSockCollection();
+        // Set threshold.
+        setThreshold();
+
+        preprocessSockCollection(true);
     }
 
     public void addSock(Sock newSock){
         collection.add(newSock);
     }
 
-    public void removeSock(int sockId){
-        collection.remove(sockId);
+    public void removeSock(Sock oldSock){
+        collection.remove(oldSock);
+    }
+
+    // TODO Convert the below if-else to an equation.
+    private void setThreshold() {
+        int n = collection.size();
+        if (n >= 400) {
+            this.t = 25;
+        }
+        else if (n >= 200) {
+            this.t = 31;
+        }
+        else if (n >= 100) {
+            this.t = 40;
+        }
+        else if (n >= 40) {
+            this.t = 60;
+        }
+        else if (n > 20) {
+            this.t = 77;
+        }
+        else {
+            this.t = 90;
+        }
     }
 
     // Obtained Blossom code from team 1.
-    public void pairBlossom() {
+    private void pairBlossom() {
         int[] match = new Blossom(getCostMatrix(), true).maxWeightMatching();
         ArrayList<Sock> result = new ArrayList<Sock>();
         for (int i=0; i<match.length; i++) {
@@ -67,9 +98,11 @@ public class SockCollection{
     }
 
     // Change the order of socks in your collection using some algorithm.
-    private void preprocessSockCollection() {
+    private void preprocessSockCollection(boolean rePair) {
         // Run Blossom.
-        pairBlossom();
+        if (rePair) {
+            pairBlossom();
+        }
 
         this.p = 0;
 
@@ -88,9 +121,8 @@ public class SockCollection{
 
         System.out.println("Pivot: " + p);
     }
-
-    // TODO: Move the worst pairing to the end.
-    private int[] getWorstPairingSockIds() {
+    
+    private Sock[] getWorstPairingSocks() {
         // Get the worst set of socks from "p" position onwards.
         int w1 = -1;
         int w2 = -1;
@@ -108,7 +140,21 @@ public class SockCollection{
             }
         }
 
-        return new int[] { w1, w2 };
+        Sock s1 = collection.get(w1);
+        Sock s2 = collection.get(w2);
+
+        // Once you remove w1, w2 becomes w1.
+        collection.remove(s1);
+        collection.remove(s2);
+
+        // Add them at the end.
+        collection.add(s1);
+        collection.add(s2);
+
+        exchanges.add(s1);
+        exchanges.add(s2);
+
+        return new Sock[] { s1, s2 };
     }
 
     // Check if a new sock will give us a better pairing than an existing pair.
@@ -143,41 +189,51 @@ public class SockCollection{
         return result;
     }*/
 
-    public int[] getWorstPairIds(){
+    public Sock[] getWorstPairSocks(){
 
         System.out.println("Pivot: " + p);
+        this.exchanges.clear();
 
         // Preprocess if our pivot doesn't separate the list well.
         if (p >= collection.size() - 4) {
             this.t -= 5;
-            preprocessSockCollection();
+            preprocessSockCollection(false);
         }
 
-        return getWorstPairingSockIds();
+        return getWorstPairingSocks();
     }
 
     public Sock getSock(int id) {
         return collection.get(id);
     }
 
-    public void putSock(int oldId, Sock s) {
-        removeSock(oldId);
+    public void putSock(Sock oldSock, Sock s) {
+        removeSock(oldSock);
+        exchanges.remove(oldSock);
 
         double maxD = maxDist;
         int s2 = 0;
-        for (int i = p; i < collection.size(); ++i) {
-            // get the match for the Sock s
-            // add into good array
+        int oddId = 0;
+        for (int i = p; i < collection.size() - exchanges.size(); ++i) {
+            // Find the match for the Sock s
+            // Add into good array
             if (collection.get(i).distance(s) < maxD) {
                 s2 = i;
+                oddId = i % 2 == 0 ? i + 1: i - 1;
                 maxD = collection.get(i).distance(s);
             }
         }
 
-        collection.add(p, collection.get(s2));
+        Sock sock2 = collection.get(s2);
+        Sock odd = collection.get(oddId);
+
+        collection.remove(sock2);
+        collection.remove(odd);
+
+        collection.add(p, sock2);
         collection.add(p, s);
 
-        collection.remove(collection.get(s2+2));
+        collection.add(collection.size() - 1, odd);
 
         p += 2;
     }
@@ -237,7 +293,7 @@ public class SockCollection{
     public ArrayList<Sock> getCollection(boolean rePair) {
         // Re-run our pairing algorithm if requested for.
         if (rePair) {
-            preprocessSockCollection();
+            preprocessSockCollection(true);
         }
 
         return collection;
@@ -245,10 +301,12 @@ public class SockCollection{
 
     // Causing a disruption in our data.
     // TODO: Do something better!!!
+    // Currently we are taking a sock in some random position and moving it to the end.
     public void shuffle() {
-        int pos = rand.nextInt(collection.size() - p - 1) + p + 1;
-        Sock s1 = collection.get(p);
-        collection.remove(p);
-        collection.add(pos, s1);
+        System.out.println("Shuffling");
+        int pos = rand.nextInt(collection.size() - p) + p;
+        Sock s1 = collection.get(pos);
+        collection.remove(pos);
+        collection.add(s1);
     }
 }
