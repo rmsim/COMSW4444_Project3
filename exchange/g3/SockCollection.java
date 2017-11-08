@@ -119,7 +119,7 @@ public class SockCollection{
             }
         }
 
-        System.out.println("Pivot: " + p);
+        //System.out.println("Pivot: " + p);
     }
     
     private Sock[] getWorstPairingSocks() {
@@ -191,7 +191,7 @@ public class SockCollection{
 
     public Sock[] getWorstPairSocks(){
 
-        System.out.println("Pivot: " + p);
+        //System.out.println("Pivot: " + p);
         this.exchanges.clear();
 
         // Preprocess if our pivot doesn't separate the list well.
@@ -306,7 +306,7 @@ public class SockCollection{
     //set boolean to decide shuffle or increase threshold
     public void shuffle(boolean reorder) {
         if (reorder) {
-            System.out.println("Shuffling");
+            //System.out.println("Shuffling");
             int pos = rand.nextInt(collection.size() - p) + p;
             Sock s1 = collection.get(pos);
             collection.remove(pos);

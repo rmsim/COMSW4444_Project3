@@ -10,10 +10,10 @@ def rotate_list(l, x):
     return l[-x:] + l[:-x]
 
 num_pairs = 10
-turnlimit = 100
+turnlimit = 10
 timelimit = 1000  # in milliseconds
 players = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6']
-repetition = 1
+repetition = 3
 
 # Generating random seed for each run
 primal_seed = 20171030
@@ -22,7 +22,7 @@ random.seed(primal_seed)
 seeds = []
 for i in range(repetition):
     seeds.append(random.randrange(2147483647))
-print(seeds)
+#print(seeds)
 
 
 results = {}
@@ -52,4 +52,7 @@ for run in range(repetition):
 
 # TODO: Add your code here
 for player, scores in results.items():
-    print(player + "'s score: " + str(scores))
+    res = str(player)
+    for s in scores:
+        res += "," + str(s)
+    print(res)
