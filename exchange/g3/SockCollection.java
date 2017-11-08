@@ -20,7 +20,7 @@ public class SockCollection{
     int id; // Player Id.
 
     int p; //pivot number
-    double t = 50; //threshold distance
+    double t; //threshold distance
 
     // Indicates the number of socks remaining to be exchanged.
     ArrayList<Sock> exchanges;
@@ -196,7 +196,7 @@ public class SockCollection{
 
         // Preprocess if our pivot doesn't separate the list well.
         if (p >= collection.size() - 4) {
-            this.t -= 5;
+            this.t -= 10;
             preprocessSockCollection(false);
         }
 
@@ -302,11 +302,19 @@ public class SockCollection{
     // Causing a disruption in our data.
     // TODO: Do something better!!!
     // Currently we are taking a sock in some random position and moving it to the end.
-    public void shuffle() {
-        System.out.println("Shuffling");
-        int pos = rand.nextInt(collection.size() - p) + p;
-        Sock s1 = collection.get(pos);
-        collection.remove(pos);
-        collection.add(s1);
+
+    //set boolean to decide shuffle or increase threshold
+    public void shuffle(boolean reorder) {
+        if (reorder) {
+            System.out.println("Shuffling");
+            int pos = rand.nextInt(collection.size() - p) + p;
+            Sock s1 = collection.get(pos);
+            collection.remove(pos);
+            collection.add(s1);
+        } else {
+            this.t += 5; //increase threshold by 5
+            preprocessSockCollection(false);
+        }
+
     }
 }

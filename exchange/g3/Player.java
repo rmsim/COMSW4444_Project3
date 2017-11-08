@@ -19,6 +19,7 @@ public class Player extends exchange.sim.Player {
     private boolean transactionOccurred = false;
 
     private RoundCollection rounds;
+    private int timeSinceRequest;
 
     @Override
     public void init(int id, int n, int p, int t, List<Sock> socks) {
@@ -45,8 +46,20 @@ public class Player extends exchange.sim.Player {
         transactionOccurred = false;
 
         if (timeSinceTransaction > 2) {
-            this.socksCollection.shuffle();
+            // keep in mind that just because we are picky
+            // does not mean that other players are also picky
+            // resolve when we take other players transac history
+
+            this.socksCollection.shuffle(true);
             timeSinceTransaction = 0;
+        }
+
+        if (timeSinceRequest > 5) { //if we are too picky
+            // keep in mind that just because we are picky
+            // does not mean that other players are also picky
+            // resolve when we take other players transac history
+            this.socksCollection.shuffle(false);
+            timeSinceRequest = 0;
         }
 
         rounds.putTransactionInfo(lastRequests, lastTransactions);
@@ -69,7 +82,17 @@ public class Player extends exchange.sim.Player {
 		 */
 
         rounds.putOfferInfo(offers);
-        return socksCollection.requestBestOffer(offers);
+        //Keep track of # of our own requests
+        //Increase threshold when # > 5 inside SockCollection
+
+        Request currentOffer = socksCollection.requestBestOffer(offers);
+        if (currentOffer.getFirstID() == -1 && currentOffer.getSecondID() ==-1) {
+            timeSinceRequest++;
+        } else {
+            timeSinceRequest = 0;
+        }
+
+        return currentOffer;
     }
 
     @Override
