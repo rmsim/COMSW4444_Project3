@@ -135,7 +135,7 @@ public class Player extends exchange.sim.Player {
     @Override
     public List<Sock> getSocks() {
         boolean rePair = false;
-        if (turn <= 1) {
+        if (turn < 1) {
             rePair = true;
         }
 

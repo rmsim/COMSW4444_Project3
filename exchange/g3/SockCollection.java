@@ -31,13 +31,15 @@ public class SockCollection{
         this.id = id;
         this.collection = new ArrayList<>(socks);
 
+        this.p = 0;
+
         rand = new Random();
         exchanges = new ArrayList<>();
 
         // Set threshold.
         setThreshold();
 
-        preprocessSockCollection(true);
+        preprocessSockCollection(true, true);
     }
 
     public void addSock(Sock newSock){
@@ -51,6 +53,9 @@ public class SockCollection{
     // TODO Convert the below if-else to an equation.
     private void setThreshold() {
         int n = collection.size();
+        if (n >= 2000) {
+            this.t = 14;
+        }
         if (n >= 400) {
             this.t = 25;
         }
@@ -63,7 +68,7 @@ public class SockCollection{
         else if (n >= 40) {
             this.t = 60;
         }
-        else if (n > 20) {
+        else if (n >= 20) {
             this.t = 77;
         }
         else {
@@ -72,39 +77,56 @@ public class SockCollection{
     }
 
     // Obtained Blossom code from team 1.
-    private void pairBlossom() {
-        int[] match = new Blossom(getCostMatrix(), true).maxWeightMatching();
-        ArrayList<Sock> result = new ArrayList<Sock>();
+    private void pairBlossom(List<Sock> input) {
+        int[] match = new Blossom(getCostMatrix(input), true).maxWeightMatching();
+        ArrayList<Sock> result = new ArrayList<>();
         for (int i=0; i<match.length; i++) {
             if (match[i] < i) continue;
-            result.add(collection.get(i));
-            result.add(collection.get(match[i]));
+            result.add(input.get(i));
+            result.add(input.get(match[i]));
         }
-        collection = result;
+
+        input.clear();
+        input.addAll(result);
     }
 
-    private float[][] getCostMatrix() {
-        int n = collection.size();
+    private float[][] getCostMatrix(List<Sock> input) {
+        int n = input.size();
         float[][] matrix = new float[n*(n-1)/2][3];
         int idx = 0;
 
         for (int i = 0; i < n; i++) {
             for (int j=i+1; j< n; j++) {
-                matrix[idx] = new float[]{i, j, (float)(-collection.get(i).distance(collection.get(j)))};
+                matrix[idx] = new float[]{i, j, (float)(-input.get(i).distance(input.get(j)))};
                 idx ++;
             }
         }
+
         return matrix;
     }
 
     // Change the order of socks in your collection using some algorithm.
-    private void preprocessSockCollection(boolean rePair) {
+    private void preprocessSockCollection(boolean rePair, boolean sort) {
         // Run Blossom.
+        double startTime = System.currentTimeMillis();
         if (rePair) {
-            pairBlossom();
+            // Check if collection size is large and we've already run Blossom once.
+            if (collection.size() >= 2000 && this.p > 0) {
+                System.out.println("p: " + p);
+                List<Sock> badSocks = collection.subList(p, collection.size());
+                pairBlossom(badSocks);
+            } else {
+                pairBlossom(collection);
+            }
         }
 
         this.p = 0;
+
+        // Check if we need to sort.
+        if (!sort) {
+            System.out.println("Time: " + (System.currentTimeMillis() - startTime));
+            return;
+        }
 
         for (int i = 0; i < collection.size(); i+=2) {
             if (collection.get(p).distance(collection.get(p+1)) > t) {
@@ -119,7 +141,7 @@ public class SockCollection{
             }
         }
 
-        //System.out.println("Pivot: " + p);
+        System.out.println("Time: " + (System.currentTimeMillis() - startTime));
     }
     
     private Sock[] getWorstPairingSocks() {
@@ -197,7 +219,7 @@ public class SockCollection{
         // Preprocess if our pivot doesn't separate the list well.
         if (p >= collection.size() - 4) {
             this.t -= 10;
-            preprocessSockCollection(false);
+            preprocessSockCollection(false, true);
         }
 
         return getWorstPairingSocks();
@@ -293,7 +315,7 @@ public class SockCollection{
     public ArrayList<Sock> getCollection(boolean rePair) {
         // Re-run our pairing algorithm if requested for.
         if (rePair) {
-            preprocessSockCollection(true);
+            preprocessSockCollection(true, false);
         }
 
         return collection;
@@ -313,7 +335,7 @@ public class SockCollection{
             collection.add(s1);
         } else {
             this.t += 5; //increase threshold by 5
-            preprocessSockCollection(false);
+            preprocessSockCollection(false, true);
         }
 
     }
