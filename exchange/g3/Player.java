@@ -1,6 +1,7 @@
 package exchange.g3;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import exchange.sim.*;
@@ -21,12 +22,18 @@ public class Player extends exchange.sim.Player {
     private RoundCollection rounds;
     private int timeSinceRequest;
 
+    private int T;
+    private List<Offer> offs;
+
     @Override
     public void init(int id, int n, int p, int t, List<Sock> socks) {
         this.id = id;
         this.turn = t;
+        this.T = t;
         this.socksCollection = new SockCollection(socks, id);
         this.rounds = new RoundCollection();
+
+        this.offs = new ArrayList<Offer>();
     }
 
     @Override
@@ -35,6 +42,59 @@ public class Player extends exchange.sim.Player {
 			lastRequests.get(i)		-		Player i's request last round
 			lastTransactions		-		All completed transactions last round.
 		 */
+        Sock marketTheoreticDesirableSock = null;
+        ArrayList<Sock> recentlyDesiredSocks = new ArrayList<Sock>();
+        if (offs.size() > 0) {
+            HashMap<Integer, ArrayList<Sock>> playersRecentlyRequestedSocks = new HashMap<Integer, ArrayList<Sock>>();
+            HashMap<Integer, ArrayList<Sock>> playersRecentlyReceivedSocks = new HashMap<Integer, ArrayList<Sock>>();
+
+            List<Offer> recentOffers = offs;//rounds.getRoundsInfo().get((rounds.getRoundsInfo().size()-1)).offers;//?
+            List<Request> recentRequests = lastRequests; //?
+            List<Transaction> recentTransactions = lastTransactions; //?
+            Request requestOfI;
+            Sock firstSockRequestedByI = null;
+            Sock secondSockRequestedByI = null;
+
+            for (int i = 0; i < lastRequests.size(); i++) {
+                if (i != id) {
+                    playersRecentlyRequestedSocks.put(i, new ArrayList<Sock>());
+                    playersRecentlyReceivedSocks.put(i, new ArrayList<Sock>());
+                    requestOfI = recentRequests.get(i);
+                    if (!((requestOfI == null) || requestOfI.getFirstID() == -1)) {
+                        firstSockRequestedByI = recentOffers.get(requestOfI.getFirstID()).getSock(requestOfI.getFirstRank());
+                        playersRecentlyRequestedSocks.get(i).add(firstSockRequestedByI);
+                    }
+                    if (!((requestOfI == null) || requestOfI.getSecondID() == -1)) {
+                        secondSockRequestedByI = recentOffers.get(requestOfI.getSecondID()).getSock(requestOfI.getSecondRank());
+                        playersRecentlyRequestedSocks.get(i).add(secondSockRequestedByI);
+                    }
+                }
+            }
+
+            for (Transaction tr : recentTransactions) {
+                if (tr.getFirstID() != id) {
+                    playersRecentlyReceivedSocks.get(tr.getFirstID()).add(tr.getSecondSock());
+                }
+                if (tr.getSecondID() != id) {
+                    playersRecentlyReceivedSocks.get(tr.getSecondID()).add(tr.getFirstSock());
+                }
+            }
+            for (int i = 0; i < lastRequests.size(); i++) {
+                if (i != id) {
+                    for (Sock s : playersRecentlyRequestedSocks.get(i)) {
+                        if (!playersRecentlyReceivedSocks.get(i).contains(s)) {
+                            recentlyDesiredSocks.add(s);
+                        }
+                    }
+                }
+            }
+            //marketTheoreticDesirableSock = socksCollection.getMeanSock(recentlyDesiredSocks);
+            //System.out.println(marketTheoreticDesirableSock + "ibcaiocbwocbaicbw");
+        }
+
+
+
+
 
         // Tracks number of turns left.
         this.turn -= 1;
@@ -64,7 +124,7 @@ public class Player extends exchange.sim.Player {
 
         rounds.putTransactionInfo(lastRequests, lastTransactions);
 
-        Sock[] worstPairSocks = this.socksCollection.getWorstPairSocks();
+        Sock[] worstPairSocks = this.socksCollection.getWorstPairSocks(recentlyDesiredSocks);
         this.s1 = worstPairSocks[0];
         this.s2 = worstPairSocks[1];
         return new Offer(s1, s2);
@@ -80,7 +140,7 @@ public class Player extends exchange.sim.Player {
 			offer.getSecond()				-		equivalent to offer.getSock(2)
 			Remark: For Request object, rank ranges between 1 and 2
 		 */
-
+        this.offs = offers;
         rounds.putOfferInfo(offers);
         //Keep track of # of our own requests
         //Increase threshold when # > 5 inside SockCollection
@@ -171,6 +231,10 @@ class RoundCollection {
 
     public Round getRoundInfo(int turn) {
         return roundsInfo.get(turn);
+    }
+
+    public List<Round> getRoundsInfo() {
+        return roundsInfo;
     }
 }
 
