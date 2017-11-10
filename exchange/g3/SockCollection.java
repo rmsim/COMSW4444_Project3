@@ -10,10 +10,6 @@ import exchange.sim.Offer;
 import exchange.sim.Request;
 import exchange.sim.Sock;
 
-// Bugs!
-// 1. While completing transactions, we should exclude socks that we are giving away.
-//     This is a problem when the new sock pairs better with a sock that we're getting rid of.
-
 public class SockCollection{
 
     ArrayList<Sock> collection;
@@ -41,19 +37,6 @@ public class SockCollection{
         setThreshold();
 
         preprocessSockCollection(true, true);
-    }
-
-    public Sock getMeanSock(ArrayList<Sock> socks) {
-        int rSum = 0;
-        int gSum = 0;
-        int bSum = 0;
-        for (Sock s : socks) {
-            rSum += s.R;
-            gSum += s.G;
-            bSum += s.B;
-        }
-        int socksSize = socks.size();
-        return new Sock(rSum/socksSize, gSum/socksSize, bSum/socksSize);
     }
 
     public void addSock(Sock newSock){
@@ -122,11 +105,9 @@ public class SockCollection{
     // Change the order of socks in your collection using some algorithm.
     private void preprocessSockCollection(boolean rePair, boolean sort) {
         // Run Blossom.
-        // double startTime = System.currentTimeMillis();
         if (rePair) {
             // Check if collection size is large and we've already run Blossom once.
             if (collection.size() >= 2000 && this.p > 0) {
-                // System.out.println("p: " + p);
                 List<Sock> badSocks = collection.subList(p, collection.size());
                 pairBlossom(badSocks);
             } else {
@@ -138,7 +119,6 @@ public class SockCollection{
 
         // Check if we need to sort.
         if (!sort) {
-            // System.out.println("Time: " + (System.currentTimeMillis() - startTime));
             return;
         }
 
@@ -154,8 +134,6 @@ public class SockCollection{
                 p += 2;
             }
         }
-
-        // System.out.println("Time: " + (System.currentTimeMillis() - startTime));
     }
     
     private Sock[] getWorstPairingSocks(List<Sock> recentlyDesiredSocks) {
@@ -260,8 +238,6 @@ public class SockCollection{
     }
 
     public Sock[] getWorstPairSocks(List<Sock> recentlyDesiredSocks){
-
-        //System.out.println("Pivot: " + p);
         this.exchanges.clear();
 
         // Preprocess if our pivot doesn't separate the list well.
@@ -302,6 +278,7 @@ public class SockCollection{
         p += 2;
     }
 
+    // Requests for the what we think is the best offer.
     public Request requestBestOffer(List<Offer> offers) {
 
         Offer myOffer = offers.get(id);
@@ -369,7 +346,6 @@ public class SockCollection{
     // Boolean parameter to decide whether to shuffle or increase threshold.
     public void shuffle(boolean reorder) {
         if (reorder) {
-            //System.out.println("Shuffling");
             int pos = rand.nextInt(collection.size() - p) + p;
             Sock s1 = collection.get(pos);
             collection.remove(pos);

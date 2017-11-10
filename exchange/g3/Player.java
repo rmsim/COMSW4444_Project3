@@ -86,8 +86,6 @@ public class Player extends exchange.sim.Player {
                     }
                 }
             }
-            //marketTheoreticDesirableSock = socksCollection.getMeanSock(recentlyDesiredSocks);
-            //System.out.println(marketTheoreticDesirableSock + "ibcaiocbwocbaicbw");
         }
 
         // Tracks number of turns left.
@@ -100,18 +98,14 @@ public class Player extends exchange.sim.Player {
         transactionOccurred = false;
 
         if (timeSinceTransaction > 2) {
-            // keep in mind that just because we are picky
-            // does not mean that other players are also picky
-            // resolve when we take other players transac history
-
+            // Re-order collection if it's been a while since a transaction has occurred.
             this.socksCollection.shuffle(true);
             timeSinceTransaction = 0;
         }
 
-        if (timeSinceRequest > 5) { //if we are too picky
-            // keep in mind that just because we are picky
-            // does not mean that other players are also picky
-            // resolve when we take other players transac history
+        if (timeSinceRequest > 5) {
+            // Change the threshold and reorder collection if it's been
+            // a while since we requested for socks.
             this.socksCollection.shuffle(false);
             timeSinceRequest = 0;
         }
@@ -133,8 +127,6 @@ public class Player extends exchange.sim.Player {
 			Remark: For Request object, rank ranges between 1 and 2
 		 */
         this.offs = offers;
-        //Keep track of # of our own requests
-        //Increase threshold when # > 5 inside SockCollection
 
         Request currentOffer = socksCollection.requestBestOffer(offers);
         if (currentOffer.getFirstID() == -1 && currentOffer.getSecondID() ==-1) {
@@ -158,9 +150,6 @@ public class Player extends exchange.sim.Player {
             Remark: rank ranges between 1 and 2
          */
 
-        //figure out which sock we are replacing and
-        //moving it into our kept set
-
         int rank;
         Sock newSock;
         if (transaction.getFirstID() == id) {
@@ -170,6 +159,7 @@ public class Player extends exchange.sim.Player {
             rank = transaction.getSecondRank();
             newSock = transaction.getFirstSock();
         }
+
         //remove the sock we are getting rid of aka s1
         //find its pair and move it to good and shift pivot
         if (rank == 1) {
