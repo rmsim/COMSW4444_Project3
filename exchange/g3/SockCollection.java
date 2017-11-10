@@ -122,11 +122,11 @@ public class SockCollection{
     // Change the order of socks in your collection using some algorithm.
     private void preprocessSockCollection(boolean rePair, boolean sort) {
         // Run Blossom.
-        double startTime = System.currentTimeMillis();
+        // double startTime = System.currentTimeMillis();
         if (rePair) {
             // Check if collection size is large and we've already run Blossom once.
             if (collection.size() >= 2000 && this.p > 0) {
-                System.out.println("p: " + p);
+                // System.out.println("p: " + p);
                 List<Sock> badSocks = collection.subList(p, collection.size());
                 pairBlossom(badSocks);
             } else {
@@ -138,7 +138,7 @@ public class SockCollection{
 
         // Check if we need to sort.
         if (!sort) {
-            System.out.println("Time: " + (System.currentTimeMillis() - startTime));
+            // System.out.println("Time: " + (System.currentTimeMillis() - startTime));
             return;
         }
 
@@ -155,16 +155,17 @@ public class SockCollection{
             }
         }
 
-        System.out.println("Time: " + (System.currentTimeMillis() - startTime));
+        // System.out.println("Time: " + (System.currentTimeMillis() - startTime));
     }
     
     private Sock[] getWorstPairingSocks(List<Sock> recentlyDesiredSocks) {
-        // Get the worst set of socks from "p" position onwards.
-        int w1 = -1;
-        int w2 = -1;
+        Sock s1;
+        Sock s2;
 
         if (recentlyDesiredSocks.size() == 0) {
-
+            // Get the worst set of socks from "p" position onwards.
+            int w1 = -1;
+            int w2 = -1;
             double maxDistance = -1.0;
 
             for (int i = p; i < collection.size(); i += 2) {
@@ -177,63 +178,51 @@ public class SockCollection{
                     maxDistance = sock1.distance(sock2);
                 }
             }
-            Sock s1 = collection.get(w1);
-            Sock s2 = collection.get(w2);
 
-            // Once you remove w1, w2 becomes w1.
-            collection.remove(s1);
-            collection.remove(s2);
-
-            // Add them at the end.
-            collection.add(s1);
-            collection.add(s2);
-
-            exchanges.add(s1);
-            exchanges.add(s2);
-
-            return new Sock[] { s1, s2 };
+            s1 = collection.get(w1);
+            s2 = collection.get(w2);
         }
+        else {
 
-        double thisSocksMinDistToDesirable;
-        Double d;
-        HashMap<Integer, Double> eachSocksMinDistToDesirable = new HashMap<Integer, Double>();
-        for (int i = p; i < collection.size(); i++) {
-            thisSocksMinDistToDesirable = maxDist;
-            for (Sock s : recentlyDesiredSocks) {
-                d = s.distance(collection.get(i));
-                if (d < thisSocksMinDistToDesirable) {
-                    thisSocksMinDistToDesirable = d;
+            double thisSocksMinDistToDesirable;
+            Double d;
+            HashMap<Integer, Double> eachSocksMinDistToDesirable = new HashMap<Integer, Double>();
+            for (int i = p; i < collection.size(); i++) {
+                thisSocksMinDistToDesirable = maxDist;
+                for (Sock s : recentlyDesiredSocks) {
+                    d = s.distance(collection.get(i));
+                    if (d < thisSocksMinDistToDesirable) {
+                        thisSocksMinDistToDesirable = d;
+                    }
                 }
+                eachSocksMinDistToDesirable.put(i, thisSocksMinDistToDesirable);
             }
-            eachSocksMinDistToDesirable.put(i, thisSocksMinDistToDesirable);
-        }
 
-        double closestDistance = maxDist;
-        double secondClosestDistance = maxDist;
-        int mostDesiredIndexOfOurBadSocks = -1;
-        int secondMostDesiredIndexOfOurBadSocks = -1;
-        for (Integer i : eachSocksMinDistToDesirable.keySet()) {
-            d = eachSocksMinDistToDesirable.get(i);
-            if (d < closestDistance) {
-                closestDistance = d;
-                mostDesiredIndexOfOurBadSocks = i;
-            }
-        }
-        for (Integer i : eachSocksMinDistToDesirable.keySet()) {
-            if (i != mostDesiredIndexOfOurBadSocks) {
+            double closestDistance = maxDist;
+            double secondClosestDistance = maxDist;
+            int mostDesiredIndexOfOurBadSocks = -1;
+            int secondMostDesiredIndexOfOurBadSocks = -1;
+            for (Integer i : eachSocksMinDistToDesirable.keySet()) {
                 d = eachSocksMinDistToDesirable.get(i);
-                if (d < secondClosestDistance) {
-                    secondClosestDistance = d;
-                    secondMostDesiredIndexOfOurBadSocks = i;
+                if (d < closestDistance) {
+                    closestDistance = d;
+                    mostDesiredIndexOfOurBadSocks = i;
                 }
             }
+            for (Integer i : eachSocksMinDistToDesirable.keySet()) {
+                if (i != mostDesiredIndexOfOurBadSocks) {
+                    d = eachSocksMinDistToDesirable.get(i);
+                    if (d < secondClosestDistance) {
+                        secondClosestDistance = d;
+                        secondMostDesiredIndexOfOurBadSocks = i;
+                    }
+                }
+            }
+
+            s1 = collection.get(mostDesiredIndexOfOurBadSocks);
+            s2 = collection.get(secondMostDesiredIndexOfOurBadSocks);
         }
 
-
-        Sock s1 = collection.get(mostDesiredIndexOfOurBadSocks);
-        Sock s2 = collection.get(secondMostDesiredIndexOfOurBadSocks);
-
-        // Once you remove w1, w2 becomes w1.
         collection.remove(s1);
         collection.remove(s2);
 
@@ -262,22 +251,13 @@ public class SockCollection{
         return false;
     }
 
-    /*
-    public double computeEmbarrassment(){
-        if(collection.size() % 2 != 0){
-            return -1.0;
+    private void updateThreshold() {
+        if (this.t <= 20) {
+            this.t -= 5;
+        } else {
+            this.t -= 10;
         }
-
-        double result = 0;
-        for(int i = 0; i < collection.size(); i += 2){
-            Sock sock1 = collection.get(i);
-            Sock sock2 = collection.get(i + 1);
-
-            result += sock1.distance(sock2);
-        }
-
-        return result;
-    }*/
+    }
 
     public Sock[] getWorstPairSocks(List<Sock> recentlyDesiredSocks){
 
@@ -286,7 +266,7 @@ public class SockCollection{
 
         // Preprocess if our pivot doesn't separate the list well.
         if (p >= collection.size() - 4) {
-            this.t -= 10;
+            updateThreshold();
             preprocessSockCollection(false, true);
         }
 
@@ -303,27 +283,21 @@ public class SockCollection{
 
         double maxD = maxDist;
         int s2 = 0;
-        int oddId = 0;
         for (int i = p; i < collection.size() - exchanges.size(); ++i) {
             // Find the match for the Sock s
             // Add into good array
             if (collection.get(i).distance(s) < maxD) {
                 s2 = i;
-                //oddId = i % 2 == 0 ? i + 1: i - 1;
                 maxD = collection.get(i).distance(s);
             }
         }
 
         Sock sock2 = collection.get(s2);
-        //Sock odd = collection.get(oddId);
 
         collection.remove(sock2);
-        //collection.remove(odd);
 
         collection.add(p, sock2);
         collection.add(p, s);
-
-        //collection.add(collection.size() - 1, odd);
 
         p += 2;
     }
@@ -392,8 +366,7 @@ public class SockCollection{
     // Causing a disruption in our data.
     // TODO: Do something better!!!
     // Currently we are taking a sock in some random position and moving it to the end.
-
-    //set boolean to decide shuffle or increase threshold
+    // Boolean parameter to decide whether to shuffle or increase threshold.
     public void shuffle(boolean reorder) {
         if (reorder) {
             //System.out.println("Shuffling");

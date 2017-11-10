@@ -19,19 +19,17 @@ public class Player extends exchange.sim.Player {
     private int timeSinceTransaction = 0;
     private boolean transactionOccurred = false;
 
-    private RoundCollection rounds;
     private int timeSinceRequest;
 
-    private int T;
+    private int totalTurns;
     private List<Offer> offs;
 
     @Override
     public void init(int id, int n, int p, int t, List<Sock> socks) {
         this.id = id;
         this.turn = t;
-        this.T = t;
+        this.totalTurns = t;
         this.socksCollection = new SockCollection(socks, id);
-        this.rounds = new RoundCollection();
 
         this.offs = new ArrayList<Offer>();
     }
@@ -42,15 +40,15 @@ public class Player extends exchange.sim.Player {
 			lastRequests.get(i)		-		Player i's request last round
 			lastTransactions		-		All completed transactions last round.
 		 */
-        Sock marketTheoreticDesirableSock = null;
         ArrayList<Sock> recentlyDesiredSocks = new ArrayList<Sock>();
-        if (offs.size() > 0) {
+        // If there were offers in the previous round and we are half-way there.
+        if (offs.size() > 0 && turn <= totalTurns/2) {
             HashMap<Integer, ArrayList<Sock>> playersRecentlyRequestedSocks = new HashMap<Integer, ArrayList<Sock>>();
             HashMap<Integer, ArrayList<Sock>> playersRecentlyReceivedSocks = new HashMap<Integer, ArrayList<Sock>>();
 
-            List<Offer> recentOffers = offs;//rounds.getRoundsInfo().get((rounds.getRoundsInfo().size()-1)).offers;//?
-            List<Request> recentRequests = lastRequests; //?
-            List<Transaction> recentTransactions = lastTransactions; //?
+            List<Offer> recentOffers = offs;
+            List<Request> recentRequests = lastRequests;
+            List<Transaction> recentTransactions = lastTransactions;
             Request requestOfI;
             Sock firstSockRequestedByI = null;
             Sock secondSockRequestedByI = null;
@@ -92,10 +90,6 @@ public class Player extends exchange.sim.Player {
             //System.out.println(marketTheoreticDesirableSock + "ibcaiocbwocbaicbw");
         }
 
-
-
-
-
         // Tracks number of turns left.
         this.turn -= 1;
 
@@ -122,8 +116,6 @@ public class Player extends exchange.sim.Player {
             timeSinceRequest = 0;
         }
 
-        rounds.putTransactionInfo(lastRequests, lastTransactions);
-
         Sock[] worstPairSocks = this.socksCollection.getWorstPairSocks(recentlyDesiredSocks);
         this.s1 = worstPairSocks[0];
         this.s2 = worstPairSocks[1];
@@ -141,7 +133,6 @@ public class Player extends exchange.sim.Player {
 			Remark: For Request object, rank ranges between 1 and 2
 		 */
         this.offs = offers;
-        rounds.putOfferInfo(offers);
         //Keep track of # of our own requests
         //Increase threshold when # > 5 inside SockCollection
 
@@ -200,54 +191,5 @@ public class Player extends exchange.sim.Player {
         }
 
         return socksCollection.getCollection(rePair);
-    }
-}
-
-// Maintains information of all the rounds.
-class RoundCollection {
-    private List<Round> roundsInfo;
-    private int turn = -1;
-
-    public RoundCollection() {
-        roundsInfo = new ArrayList<>();
-    }
-
-    public void putOfferInfo(List<Offer> offers) {
-        turn += 1;
-
-        roundsInfo.add(new Round(offers));
-    }
-
-    public void putTransactionInfo(
-            List<Request> requests,
-            List<Transaction> transactions) {
-
-        // For all turn# >= 0 we have request information.
-        if (turn >= 0) {
-            roundsInfo.get(turn).requests = requests;
-            roundsInfo.get(turn).transactions = transactions;
-        }
-    }
-
-    public Round getRoundInfo(int turn) {
-        return roundsInfo.get(turn);
-    }
-
-    public List<Round> getRoundsInfo() {
-        return roundsInfo;
-    }
-}
-
-// Stores offers, requests, and transactions for a round.
-class Round {
-    public List<Offer> offers;
-    public List<Request> requests;
-    public List<Transaction> transactions;
-
-    public Round() {
-    }
-
-    public Round(List<Offer> offers) {
-        this.offers = offers;
     }
 }
